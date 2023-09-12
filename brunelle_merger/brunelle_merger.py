@@ -160,7 +160,7 @@ class Brunelle_merger(object): #Professor Nathan Brunelle!
         new_counts_2 = self.counts_2.copy()
         new_bins = self.original_bins.copy()
         
-        while len(new_bins) > target_bin_number:
+        while len(new_counts_1) > target_bin_number:
             current_distance = self.distanceFunc(new_counts_1, new_counts_2)
             
             combinations = {}

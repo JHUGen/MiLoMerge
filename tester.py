@@ -3,9 +3,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as sp
 import mplhep as hep
+import pickle
 
-data_1 = np.random.normal(3, 2, 1000)
-data_2 = np.random.normal(5, 5, 1000)
+import multidimensionaldiscriminant.optimizeroc as optimizeroc #clone an instance of multidimensional roc in your area
+
+data_1 = np.random.normal(3, 2, 10000)
+data_2 = np.random.normal(5, 5, 10000)
 
 counts, bins = np.histogram(data_1, 50, range=[0,10], density=True)
 counts /= counts.sum()
@@ -206,56 +209,90 @@ def ROC_curve(sample1, sample2, bins=100, lower=0, upper=1):
     return TPR, FPR, np.trapz(TPR, FPR)
 
 
+hists = {
+    1 : counts,
+    2 : counts_2
+}
+
+rocareacoeffdict = {(1,2):1}
+optimizer = optimizeroc.OptimizeRoc(hists, rocareacoeffdict, mergemultiplebins=True, smallchangetolerance=1e-5)
+# result = optimizer.run()
+saved_result = optimizer.run(resultfilename="output.pkl", rawfilename="output_raw.pkl")
+with open("output_raw.pkl", "rb") as f:
+    saved_result = pickle.load(f)
+
+
+
+N_BINS_WANTED = 5
+
 print( "OG Score:", ROC_curve(data_1.copy(), data_2.copy(), bins.copy() )[-1] )
 
 edm = bm.Brunelle_merger(counts, counts_2, bins, earth_mover)
-edm_terms = edm.greedy_merge(5)
+edm_terms = edm.greedy_merge(N_BINS_WANTED)
 
 print(*edm_terms)
 print("EMD Score:", ROC_curve(data_1, data_2, edm_terms[-1], 0, 10)[-1] )
 
 
 heshy = bm.Brunelle_merger(counts, counts_2, bins, heshy_metric)
-heshy_terms = heshy.greedy_merge(5)
+heshy_terms = heshy.greedy_merge(N_BINS_WANTED)
 
 print(*heshy_terms)
 print("HESHY Score:", ROC_curve(data_1, data_2, heshy_terms[-1], 0, 10)[-1] )
 
 frown = bm.Brunelle_merger(counts, counts_2, bins, frown_metric)
-frown_terms = frown.greedy_merge(5)
+frown_terms = frown.greedy_merge(N_BINS_WANTED)
 
 print(*frown_terms)
 print("FROWN SCORE:", ROC_curve(data_1, data_2, frown_terms[-1], 0, 10)[-1])
 
 clown = bm.Brunelle_merger(counts, counts_2, bins, clown_metric)
-clown_terms = clown.greedy_merge(5)
+clown_terms = clown.greedy_merge(N_BINS_WANTED)
 
 print(*clown_terms)
 print("CLOWN SCORE:", ROC_curve(data_1, data_2, clown_terms[-1], 0, 10)[-1])
 
+new_bins = []
 
+bins_made = sorted(saved_result[-N_BINS_WANTED], key=min)
+for bin in bins_made:
+#         print(min(bin), max(bin))
+    index = min(bin)[0]
+    new_bins.append(bins[index])
 
-mosaic = [[1,2,3],
-          [1,4,5]]
+index = max(bins_made[-1])[0]
+new_bins.append(bins[index])
+
+if new_bins[-1] != bins[-1]:
+    new_bins[-1] = bins[-1]
+
+print("ALGO SCORE:", ROC_curve(data_1, data_2, new_bins)[-1])
+
+mosaic = [[1,2,3,6],
+          [1,4,5,6]]
 
 ref_dict = {
     1 : bins,
     2 : edm_terms[-1],
     3 : heshy_terms[-1],
     4 : frown_terms[-1],
-    5 : clown_terms[-1]
+    5 : clown_terms[-1],
+    6 : new_bins
 }
 
 ref_names = {
     1 : "OG",
     2 : "EMD",
-    3 : "HESHY",
+    3 : "RAW ROC",
     4 : "FROWN",
-    5 : "CLOWN"
+    5 : "CLOWN",
+    6 : "OG ALGO"
 }
 
 
 fig, ax = plt.subplot_mosaic(mosaic, figsize=(10,7))
+
+fig2, ax2 = plt.subplots(1,1, figsize=(10,7))
 
 for i in ref_dict.keys():
     counts_1, _ = np.histogram(data_1, ref_dict[i], density=True)
@@ -263,13 +300,24 @@ for i in ref_dict.keys():
     counts_2, _ = np.histogram(data_2, ref_dict[i], density=True)
     counts_2 /= counts_2.sum()
     
+    print("BIN_LENGTH FOR:", ref_names[i], ":", len(ref_dict[i]))
+    
     hep.histplot(counts_1, ref_dict[i], label="1", lw=3, ax=ax[i])
     hep.histplot(counts_2, ref_dict[i], label="2", lw=3, ax=ax[i])
     
-    ax[i].set_title(ref_names[i] + " SCORE={:.2f}".format(ROC_curve(data_1.copy(), data_2.copy(), ref_dict[i].copy() )[-1]))
+    TPR, FPR, score = ROC_curve(data_1.copy(), data_2.copy(), ref_dict[i].copy() )
+    
+    ax[i].set_title(ref_names[i] + " SCORE={:.2f}".format(score))
     ax[i].legend()
+    
+    ax2.plot(TPR, FPR, label=ref_names[i] + " SCORE={:.2f}".format(score))
 
 
 fig.suptitle("Reducing LHS to 5 bins")
 fig.tight_layout()
 fig.savefig('testing_hist.png')
+
+ax2.legend()
+fig2.suptitle("Reducing OG to 5 bins")
+fig2.tight_layout()
+fig2.savefig('testing_hist_ROC.png')
