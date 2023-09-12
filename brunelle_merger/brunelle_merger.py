@@ -1,5 +1,5 @@
 import numpy as np
-
+import inspect
 # def split_hist(counts, bins):
 #     median = len(bins)//2
     
@@ -96,6 +96,11 @@ class Brunelle_merger(object): #Professor Nathan Brunelle!
         
         if not callable(distanceFunc):
             raise TypeError("Function provided must be of type function, not type {}!".format(type(distanceFunc)))
+        
+        if len(inspect.signature(distanceFunc).parameters) != 2:
+            raise TypeError("Function provided must take in 2 parameters, not {:.0f}!".format(
+                            len(inspect.signature(distanceFunc).parameters))
+                            )
         
         self.distanceFunc = distanceFunc
         
