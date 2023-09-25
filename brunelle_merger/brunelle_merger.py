@@ -207,7 +207,7 @@ class Grim_Brunelle_merger(object):
         self.original_bins = bins.copy()
         self.original_counts = np.vstack(counts, dtype=float)
         self.original_counts = self.original_counts.T
-        self.original_counts /= self.original_counts.sum(axis=0)
+        self.original_counts /= np.abs(self.original_counts).sum(axis=0)
         self.original_counts = self.original_counts.T
         
         stats_for_mean = np.concatenate(counts)
@@ -216,7 +216,7 @@ class Grim_Brunelle_merger(object):
                                         bins, 
                                         *counts
                                         )
-        
+
         self.n_items = len(self.merged_counts[0])
         starting_indices = range(self.n_items) #sets up a dictionary that looks like {0:0, 1:1, ..., i:i}
         
@@ -254,7 +254,6 @@ class Grim_Brunelle_merger(object):
                     [counts[h][b], counts[hP][bP], counts[h][bP], counts[hP][b]]
                     )
         return numerator/(2*denomenator)
-        
     
     def local_merge(self, i, j, k):
         temp_counts = self.counts_to_merge.copy()
@@ -277,14 +276,13 @@ class Grim_Brunelle_merger(object):
         
         return (temp_counts, temp_edges)
     
-    
     def __trace__(self, i):
         while self.non_local_indices[i] != i:
             i = self.non_local_indices[i]
         return i
     
     def non_local_merge(self, i, j):
-        merged_counts = np.zeros(self.n, self.n_items - 1)
+        merged_counts = np.zeros(shape=(self.n, self.n_items - 1), dtype=float)
         
         k = 0
         for n in range(self.n_items):
@@ -386,12 +384,19 @@ class Grim_Brunelle_merger(object):
             
             self.counts_to_merge, self.local_edges = temp_counts, temp_bins
             
-            
             self.n_items -= 1
-            # print("subtracted!", self.n_items)
-            
             
         return self.counts_to_merge, self.local_edges
+    
+    def run_nonlocal(self, target_bin_number):
+        while self.n_items > target_bin_number:
+            indices = list(range(len(self.counts_to_merge)))
+            distance, i, j = self.closest_pair_1d(indices)
+            print(self.n_items, (i,j), distance)
+            self.non_local_merge(i,j)
+    
+        return self.counts_to_merge, np.array(range(self.n_items))
+    
 
 class Brunelle_merger(object): #Professor Nathan Brunelle!
     #https://engineering.virginia.edu/faculty/nathan-brunelle
