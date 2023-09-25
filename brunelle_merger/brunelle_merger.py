@@ -205,7 +205,7 @@ class Grim_Brunelle_merger(object):
 
 
         self.original_bins = bins.copy()
-        self.original_counts = np.vstack(counts, dtype=float)
+        self.original_counts = np.vstack(counts)
         self.original_counts = self.original_counts.T
         self.original_counts /= np.abs(self.original_counts).sum(axis=0)
         self.original_counts = self.original_counts.T
