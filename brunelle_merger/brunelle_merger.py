@@ -74,7 +74,7 @@ def merge_bins(target, bins, *counts, **kwargs):
     
     new_counts = []
     [new_counts.append([]) for _ in counts]
-        
+    
     counts = np.vstack(counts)
     
     if any([len(bins) != len(count) + 1 for count in counts]):
@@ -88,7 +88,7 @@ def merge_bins(target, bins, *counts, **kwargs):
         new_bins = [bins[0]] #the first bin edge is included automatically if not explicitly stated otherwise
     else:
         new_bins = []
-        
+    
     if ab_val:
         counts = np.abs(counts)
     
@@ -102,16 +102,16 @@ def merge_bins(target, bins, *counts, **kwargs):
             i += 1
         
         if drop_first and len(new_bins) == 0:
-                first_bin = max(i - 1, 0)
-                new_bins += [bins[first_bin]]
-                
+            first_bin = max(i - 1, 0)
+            new_bins += [bins[first_bin]]
+            
         if not( np.any(summation <= target) and (i == len(counts[0])) ):
             for k in range(len(counts)):
                 new_counts[k] += [np.sum(counts[k][start:i])]
             new_bins += [bins[i]]
         else:
             for k in range(len(counts)):
-                new_counts[k][-1] += np.sum(counts[start:i])
+                new_counts[k][-1] += np.sum(counts[start:i+1])
             new_bins[-1] = bins[i]
     
     return np.vstack(new_counts), np.array(new_bins)
