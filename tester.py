@@ -145,8 +145,8 @@ def ROC_curve(sample1, sample2, bins=100, lower=0, upper=1, supplied_counts=Fals
         hypo1_counts, _ = np.histogram(sample1, bins=bins, density=True)
         hypo1_counts /= hypo1_counts.sum()
     else:
-        hypo1_counts /= sample1.sum()
-        hypo2_counts /= sample2.sum()
+        hypo1_counts = sample1.sum()
+        hypo2_counts = sample2.sum()
         
     
     # print(list(g1_phi_counts))
