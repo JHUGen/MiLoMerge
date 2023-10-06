@@ -1,136 +1,5 @@
 import numpy as np
 import inspect
-<<<<<<< HEAD
-def grim_metric(i, j, *counts):
-    counts = np.array(counts)
-    counts = counts.copy()
-    it = iter(counts)
-    the_len = len(next(it))
-    
-    if not all(len(l) == the_len for l in it):
-        raise ValueError('not all lists have same length!')
-
-    n = len(counts)
-    n_items = len(counts[0])
-    
-    overall_counts = np.vstack(counts)
-    
-    h = np.ravel(overall_counts[:,i])
-    hBar = np.ravel(overall_counts[:,j])
-    
-    terms = hBar/h
-    numerator = (np.nancumprod(terms)**(1./n))[-1]
-    denomenator = np.sum(terms)
-    
-    metric = (numerator/denomenator)#*np.exp(np.sum(h + hBar)/np.sum(overall_counts) - 1 )
-    return metric
-
-def __closest_pair__(distanceFunc, *counts):
-    if len(counts[0]) == 1:
-        return np.inf
-    elif len(counts[0]) == 2:
-        return distanceFunc(0,1,*counts)
-    else:
-        m = len(counts[0])//2
-        s1, s2 = counts[:,:m], counts[:,m:]
-        d1 = __closest_pair__(distanceFunc, s1)
-        d2 = __closest_pair__(distanceFunc, s2)
-        d12 = distanceFunc(m-1, m, *counts)
-        
-        return min(d1, d2, d12)
-
-
-def merge_bins(target, bins, *counts, **kwargs):
-    """Merges a set of bins that are given based off of the counts provided
-    Eliminates any bin with a corresponding count that is less than the target
-    Useful to do merge_bins(*np.histogram(data), ...)
-    
-    
-    Parameters
-    ----------
-    counts : numpy.ndarray
-        The counts of a histogram
-    bins : numpy.ndarray
-        The bins of a histogram
-    target : int, optional
-        The target value to achieve - any counts below this will be merged, by default 0
-    ab_val : bool, optional
-        If on, the target will consider the absolute value of the counts, not the actual value, by default True
-    drop_first : bool, optional
-        If on, the function will not automatically include the first bin edge, by default False
-
-    Returns
-    -------
-    Tuple(numpy.ndarray, numpy.ndarray)
-        A np.histogram object with the bins and counts merged
-
-    Raises
-    ------
-    ValueError
-        If the bins and counts are not sized properly the function will fail
-    """
-    
-    drop_first = kwargs.get('drop_first',False)
-    ab_val = kwargs.get('ab_val', True)
-    
-    new_counts = []
-    [new_counts.append([]) for _ in counts]
-    
-    counts = np.vstack(counts)
-    
-    if any([len(bins) != len(count) + 1 for count in counts]):
-        errortext = "Length of bins is {:.0f}, lengths of counts are ".format(len(bins))
-        errortext += " ".join([str(len(count)) for count in counts])
-        errortext += "\nlen(bins) should be len(counts) + 1!"
-        raise ValueError("\n" + errortext)
-    
-    
-    if not drop_first:
-        new_bins = [bins[0]] #the first bin edge is included automatically if not explicitly stated otherwise
-    else:
-        new_bins = []
-    
-    if ab_val:
-        counts = np.abs(counts)
-    
-    
-    i = 0
-    while i < len(counts[0]):
-        summation = np.zeros(len(counts))
-        start = i
-        # print("starting iteration at:", i)
-        # print("Current running sum is ( {:.3f}, {:.3f} )".format(np.sum(new_counts[0]), np.sum(new_counts[1])))
-        # print("Running sum should be ( {:.3f}, {:.3f} )".format(*np.sum(counts[:,:i], axis=1)))
-        while np.any(summation <= target) and (i < len(counts[0])):
-            summation += counts[:,i]
-            i += 1
-        # print("Merged counts", start, "through", i-1)
-        
-        if drop_first and len(new_bins) == 0:
-            first_bin = max(i - 1, 0)
-            new_bins += [bins[first_bin]]
-            
-        if not( np.any(summation <= target) and (i == len(counts[0])) ):
-            for k in range(len(counts)):
-                new_counts[k] += [np.sum(counts[k][start:i])]
-            new_bins += [bins[i]]
-        else:
-            for k in range(len(counts)):
-                new_counts[k][-1] += np.sum(counts[k][start:i])
-            new_bins[-1] = bins[i]
-        # print("Current running sum is ( {:.3f}, {:.3f} )".format(np.sum(new_counts[0]), np.sum(new_counts[1])))
-        # print("Running sum should be ( {:.3f}, {:.3f} )".format(*np.sum(counts[:,:i], axis=1)))
-        # print()
-        # print()
-    return np.vstack(new_counts), np.array(new_bins)
-
-
-def merge_ahead(counts, bins, i):
-    """Merges the bin at index i with its buddy at index i+1
-    The buddy absorbs the selected bin
-    i.e. [2,3,4] -> [2,4] if i=1
-=======
->>>>>>> 92594f4eb3e7de02d5d2c787322f3bc598382092
 
 class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
     #https://engineering.virginia.edu/faculty/nathan-brunelle
@@ -173,12 +42,6 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
         
         stats_for_mean = np.concatenate(counts)
         
-<<<<<<< HEAD
-        self.merged_counts, self.post_stats_merge_bins = merge_bins(0.05*np.median( stats_for_mean ), 
-                                        bins, 
-                                        *self.original_counts.copy()
-                                        )
-=======
         if not stats_check:
             self.merged_counts, self.post_stats_merge_bins = self.original_counts.copy(), self.original_bins.copy()
         else:
@@ -186,7 +49,6 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
                                             bins, 
                                             *self.original_counts.copy()
                                             )
->>>>>>> 92594f4eb3e7de02d5d2c787322f3bc598382092
 
         self.n_items = len(self.merged_counts[0])
         
@@ -356,9 +218,6 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
                 min_indices = mappable[min_dist]
                 return [min_dist, *min_indices]
     
-<<<<<<< HEAD
-    def run_local(self, target_bin_number):
-=======
     def run_local(self, target_bin_number, subtraction_metric=True):
         """runs the local bin merging
 
@@ -374,7 +233,6 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
         Tuple(numpy.ndarray, numpy.ndarray)
             a numpy histogram of the new counts and bins
         """
->>>>>>> 92594f4eb3e7de02d5d2c787322f3bc598382092
         
         while self.n_items > target_bin_number:
             combinations = {}
