@@ -127,6 +127,8 @@ def ROC_curve(sample1, sample2, bins=100, lower=0, upper=1, supplied_counts=Fals
         The lower end of your sample range
     upper : float
         The upper end of your sample range
+    supplied_counts : optional, bool
+        Enable this if the "samples" you are passing are actually counts from a histogram
     
 
     Returns
@@ -203,12 +205,6 @@ def ROC_curve(sample1, sample2, bins=100, lower=0, upper=1, supplied_counts=Fals
     return TPR, FPR, np.abs(np.trapz(FPR, TPR))
 
 def run_test(stats_check, bins_wanted, subtraction_metric):
-    data = uproot.open('test_data/data.root')
-    
-    branches = ['Z1Mass', 'Z2Mass', 'helphi', 'helcosthetaZ1', 'helcosthetaZ2']
-    sm_data = data['sm'].arrays(branches, library='np')
-    ps_data = data['ps'].arrays(branches, library='np')
-
 
     # counts_sm, edges = np.histogramdd([sm_data[i] for i in branches], 20,
     #                             range=[ None, None, [-3.14, 3.14], [-1, 1], [-1, 1] ])
@@ -216,23 +212,6 @@ def run_test(stats_check, bins_wanted, subtraction_metric):
     # counts_ps, _ = np.histogramdd([ps_data[i] for i in branches], edges,
     #                             range=[ None, None, [-3.14, 3.14], [-1, 1], [-1, 1] ])
     # counts_ps /= counts_ps.sum()
-    
-    
-    counts_sm = [None]*5
-    counts_ps = [None]*5
-    edges = [None]*5    
-    
-    ranges = [
-        None,
-        None,
-        [-3.14, 3.14],
-        [-1,1],
-        [-1,1]
-    ]
-    
-    for n, i in enumerate(branches):
-        counts_sm[n], edges[n] = np.histogram(sm_data[i], 100, range=ranges[n], density=True)
-        counts_ps[n], _ = np.histogram(ps_data[i], edges[n], density=True)
 
     OG_edges = edges.copy()
     OG_counts = [None]*5
@@ -254,16 +233,16 @@ def run_test(stats_check, bins_wanted, subtraction_metric):
     post_merge_counts = [None]*5
 
     for i in range(5):
-        indiv_axis = tuple([j for j in range(5) if j != i])
+        # indiv_axis = tuple([j for j in range(5) if j != i])
         # x = np.sum(counts_sm, axis=indiv_axis)
         # xp = np.sum(counts_ps, axis=indiv_axis)
         x = counts_sm[i]
         xp = counts_ps[i]
         OG_counts[i] = [x.copy(), xp.copy()]
         
-        dim_bins = bm.Grim_Brunelle_merger(edges[i], x.copy(), xp.copy(), stats_check=stats_check)
+        dim_bins = bm.Grim_Brunelle_merger(edges[i], x.copy(), xp.copy(), stats_check=stats_check, subtraction_metric=subtraction_metric)
         start1 = time.time()
-        temp_counts, temp_bins = dim_bins.run_local(bins_wanted, subtraction_metric=subtraction_metric)
+        temp_counts, temp_bins = dim_bins.run(bins_wanted)
         end1 = time.time()
         grim_bins[i] = temp_bins.copy()
         grim_counts[i] = temp_counts.copy()
@@ -277,9 +256,11 @@ def run_test(stats_check, bins_wanted, subtraction_metric):
         # grim_counts_fast[i] = temp_counts.copy()
         # print("Sets:", end2 - start2)
         
-        dim_bins.reset()
+        
+        dim_bins = bm.Grim_Brunelle_nonlocal(edges[i], x.copy(), xp.copy(), stats_check=stats_check, subtraction_metric=subtraction_metric)
         start3 = time.time()
-        nonlocal_counts[i], temp_bins = dim_bins.run_nonlocal(bins_wanted, subtraction_metric=subtraction_metric)
+        nonlocal_counts[i], temp_bins = dim_bins.run(bins_wanted, track=False)
+        tracked_points = dim_bins.tracker
         end3 = time.time()
         nonlocal_bins[i] = temp_bins.copy()
         print("Nonlocal:", end3 - start3)
@@ -392,9 +373,52 @@ def run_test(stats_check, bins_wanted, subtraction_metric):
         
 
 if __name__ == "__main__":
-    for stat_check in (True, False):
-        for subtraction_metric in [True]: #division metric WILL nan out
-            for n_bins in (5,7,10):
-                run_test(stat_check, n_bins, subtraction_metric)
-                print()
+    data = uproot.open('test_data/data.root')
+    
+    branches = ['Z1Mass', 'Z2Mass', 'helphi', 'helcosthetaZ1', 'helcosthetaZ2']
+    sm_data = data['sm'].arrays(branches, library='np')
+    ps_data = data['ps'].arrays(branches, library='np')
+    
+    counts_sm = [None]*5
+    counts_ps = [None]*5
+    edges = [None]*5    
+    
+    ranges = [
+        None,
+        None,
+        [-3.14, 3.14],
+        [-1,1],
+        [-1,1]
+    ]
+    
+    for n, i in enumerate(branches):
+        counts_sm[n], edges[n] = np.histogram(sm_data[i], 100, range=ranges[n], density=True)
+        counts_ps[n], _ = np.histogram(ps_data[i], edges[n], density=True)
+    
+    
+    
+    # for stat_check in [True, False]:
+    #     for subtraction_metric in [True]: #division metric WILL nan out
+    #         for n_bins in [5,7,10]:
+    #             run_test(stat_check, n_bins, subtraction_metric)
+    #             print()
+    
+    nonlocal_bins = [None]*5
+    nonlocal_counts = [None]*5
+    bins_wanted=5
+    
+    for i in range(len(branches)):
+        x = counts_sm[i]
+        xp = counts_ps[i]
+        
+        dim_bins = bm.Grim_Brunelle_nonlocal(edges[i], x.copy(), xp.copy(), stats_check=False, subtraction_metric=True)
+        start3 = time.time()
+        nonlocal_counts[i], temp_bins = dim_bins.run(bins_wanted, track=True)
+        end3 = time.time()
+        tracked_points = dim_bins.tracker
+        nonlocal_bins[i] = temp_bins.copy()
+        print("Nonlocal:", end3 - start3)
+        
+        print(tracked_points)
+    
     os.system('mv *.png plots/')
