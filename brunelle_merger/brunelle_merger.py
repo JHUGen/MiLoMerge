@@ -1,5 +1,4 @@
 import numpy as np
-# import helpers as h
 
 def print_msg_box(msg, indent=1, width=0, title=""):
     """returns message-box with optional title.
@@ -32,7 +31,7 @@ def print_msg_box(msg, indent=1, width=0, title=""):
 def merge_bins(target, bins, *counts, **kwargs):
     """Merges a set of bins that are given based off of the counts provided
     Eliminates any bin with a corresponding count that is less than the target
-    Useful to do merge_bins(*np.histogram(data), ...)
+    Useful to do merge_bins(\*np.histogram(data), ...)
     
     
     Parameters
@@ -116,14 +115,22 @@ def merge_bins(target, bins, *counts, **kwargs):
 class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
     #https://engineering.virginia.edu/faculty/nathan-brunelle
     def __init__(self, bins, *counts, stats_check=True, subtraction_metric=True, weights=None) -> None:
-        """This is the money class
+        """This class is the base object for bin merging. It merges bins locally (by outting adjacent bins together).
+        Please only input 1 dimensional histograms! Should you need to operate upon a multidimensional histogram - please unroll them first.
 
         Parameters
         ----------
         bins : numpy.ndarray
             These are your bin edges
         counts : numpy.ndarray
-            These are a set of counts put in as args. Place an unlimited number of them
+            These are a set of bin counts put in as args. Place an unlimited number of them - each one corresponds to a different hypothesis. 
+            Both bins and counts can be created using numpy.histogram()
+        stats_check : bool, optional
+            If you want to insert a statistics check enable this option, by default True
+        subtraction_metric : bool, optional
+            If you want to use the metric that does subtraction. If false, it uses version of the metric that uses division, by default True
+        weights : numpy.ndarray, optional
+            A list of weights of the same length as the number of counts put in for each hypothesis. If None all weights are 1, by default None
 
         Raises
         ------
@@ -131,6 +138,8 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
             If your bin counts are not all the same length, raise an error
         ValueError
             If len(counts) != len(bins) - 1 then raise an error
+        ValueError
+            If len(weights) != len(counts) then raise an error
         """
         
         it = iter(counts)
@@ -246,18 +255,18 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
             index i
         j : int
             index j
-        local : bool, optional
-            If true, merge bins locally - otherwise merge nonlocally, by default True
 
         Returns
         -------
-        Tuple([numpy.ndarray, numpy.ndarray]) OR numpy.ndarray
-            Returns a numpy histogram tuple if local merging, and a numpy list of counts if nonlocal
+        Tuple([numpy.ndarray, numpy.ndarray])
+            Returns a numpy histogram tuple of locally merged bins
 
         Raises
         ------
         ValueError
             Raises a ValueError if the edges are merged upon
+        ValueError
+            Raises an error if you try to merge non-adjacent bins
         """
         temp_counts = self.counts_to_merge.copy()
         temp_edges = self.local_edges.copy()
@@ -320,7 +329,7 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
         return self.counts_to_merge, self.local_edges
     
     def run_local_faster(self, target_bin_number):
-        """attempts to run faster - needs to be debugged
+        """attempts to run faster - needs to be debugged. WIP
 
         Parameters
         ----------
@@ -381,13 +390,41 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
 
 class Grim_Brunelle_with_standard_model(Grim_Brunelle_merger):
     def __init__(self, bins, *counts, stats_check=True, subtraction_metric=True, weights=None) -> None:
+        """This class  merges bins locally (by outting adjacent bins together) by comparing each item to a "Standard Model" sample.
+        The first set of counts that are input will be treated as the standard model sample.
+        Please only input 1 dimensional histograms! Should you need to operate upon a multidimensional histogram - please unroll them first.
+
+        Parameters
+        ----------
+        bins : numpy.ndarray
+            These are your bin edges
+        counts : numpy.ndarray
+            These are a set of bin counts put in as args. Place an unlimited number of them -  each one corresponds to a different hypothesis. 
+            The first array that is input will be the "Standard Model" sample.
+            Both bins and counts can be created using numpy.histogram()
+        stats_check : bool, optional
+            If you want to insert a statistics check enable this option, by default True
+        subtraction_metric : bool, optional
+            If you want to use the metric that does subtraction. If false, it uses version of the metric that uses division, by default True
+        weights : numpy.ndarray, optional
+            A list of weights of the same length as the number of counts put in for each hypothesis. If None all weights are 1, by default None
+
+        Raises
+        ------
+        ValueError
+            If your bin counts are not all the same length, raise an error
+        ValueError
+            If len(counts) != len(bins) - 1 then raise an error
+        ValueError
+            If len(weights) != len(counts) then raise an error
+        """
         super().__init__(bins, *counts, stats_check=stats_check, subtraction_metric=subtraction_metric, weights=weights)
         
         self.weights = np.array(weights)
         
         
     def __MLM__(self, b, bP):
-        """The distance function MLM
+        """The distance function MLM - edited to perform only comparisons with the "Standard Model" sample.
 
         Parameters
         ----------
@@ -433,30 +470,84 @@ class Grim_Brunelle_with_standard_model(Grim_Brunelle_merger):
 
 class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
     def __init__(self, bins, *counts, stats_check=True, subtraction_metric=True, weights=None) -> None:
+        """This class is the base object for bin merging. 
+        It merges bins nonlocally - so the bins no longer contain any physical meaning afterwards.
+        Please only input 1 dimensional histograms! Should you need to operate upon a multidimensional histogram - please unroll them first.
+
+        Parameters
+        ----------
+        bins : numpy.ndarray
+            These are your bin edges
+        counts : numpy.ndarray
+            These are a set of bin counts put in as args. Place an unlimited number of them - each one corresponds to a different hypothesis. 
+            Both bins and counts can be created using numpy.histogram()
+        stats_check : bool, optional
+            If you want to insert a statistics check enable this option, by default True
+        subtraction_metric : bool, optional
+            If you want to use the metric that does subtraction. If false, it uses version of the metric that uses division, by default True
+        weights : numpy.ndarray, optional
+            A list of weights of the same length as the number of counts put in for each hypothesis. If None all weights are 1, by default None
+
+        Raises
+        ------
+        ValueError
+            If your bin counts are not all the same length, raise an error
+        ValueError
+            If len(counts) != len(bins) - 1 then raise an error
+        ValueError
+            If len(weights) != len(counts) then raise an error
+        """
         super().__init__(bins, *counts, stats_check=stats_check, subtraction_metric=subtraction_metric, weights=weights)
     
-        self.tracker = {}
-        # for i in range(self.n_items):
-            # self.tracker[i] = [i]
+        self.tracker = [ {} ]
+        for i in range(self.n_items):
+            self.tracker[0][i] = (i, i) #record where it started, and where it ended
     
     def __trace__(self, i):
+        """WIP. Trying to trace the placement of where bins go
+
+        Parameters
+        ----------
+        i : int
+            index i
+
+        Returns
+        -------
+        int
+            what index i used to be
+        """
         # print(self.tracker)
         og_i = i
-        print(og_i)
-        while self.tracker[i] != [i]:
+        while self.tracker[-1][i][1] != i:
             # print("Trying to match", i, "with", self.tracker[i])
-            i = self.tracker[i]
+            i = self.tracker[-1][i][1]
         print(og_i, "points to", i)
         print('\n')
         return i
     
     def __merge__(self, i, j, track=False):
+        """Merges bins together by bin count index
+
+        Parameters
+        ----------
+        i : int
+            index i
+        j : int
+            index j
+        track : bool, optional
+            Whether you would like to track the placement of where the original bins go in the nonlocal case, by default False
+
+        Returns
+        -------
+        Tuple([numpy.ndarray, numpy.ndarray])
+            Returns a numpy histogram tuple of nonlocally merged bin edges and their counts. The bin edges are nonphysical, so are just a range of indices equally spaced.
+        """
         merged_counts = np.zeros(shape=(self.n, self.n_items - 1), dtype=float)
         k = 0
         for n in range(self.n_items):
             if n != i and n != j:
-                # if track:
-                    # self.tracker[n] = k
+                if track:
+                    self.tracker[n] = k
                 merged_counts[:,k] = self.counts_to_merge[:,n]
                 k += 1
         
@@ -472,18 +563,17 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         return self.counts_to_merge
 
     def __closest_pair__(self):
-        """A Recursive function to match the closest pair of points
-
-        Parameters
-        ----------
-        indices : numpy.ndarray
-            A list of possible indices to use in recursion
-        brute_force : bool, optional
-            If true, brute force the closest pair - use as a sanity check, by default False
+        """A simple function to find the closest pair of points between any two bins nonlocally
 
         Returns
         -------
-            the closest pair of points (the recursive version currently doesn't work properly just use the brute force)
+        Tuple([float, int, int])
+            A tuple of values containing the smallest distance, and the indices that create that distance
+
+        Raises
+        ------
+        ValueError
+            If there is ever a nan returned throw an error. This is only possible when using the division version of the metric.
         """
         # print("USING INDICES:", indices, "With BRUTE_FORCE=", brute_force)
         smallest_distance = (np.inf, None, None)
@@ -505,6 +595,8 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         ----------
         target_bin_number : int
             the number of bins you want
+        track : bool, optional
+            Whether you would like to track the placement of where the original bins go in the nonlocal case, by default False
 
         Returns
         -------
@@ -521,6 +613,35 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
     
 class Grim_Brunelle_nonlocal_with_standard_model(Grim_Brunelle_nonlocal):
     def __init__(self, bins, *counts, stats_check=True, subtraction_metric=True, weights=None) -> None:
+        """This class will perform nonlocal bin merging by comparing each item to a "Standard Model" sample.
+        The first set of counts that are input will be treated as the standard model sample.
+        It merges bins nonlocally - so the bins no longer contain any physical meaning afterwards.
+        Please only input 1 dimensional histograms! Should you need to operate upon a multidimensional histogram - please unroll them first.
+
+        Parameters
+        ----------
+        bins : numpy.ndarray
+            These are your bin edges
+        counts : numpy.ndarray
+            These are a set of bin counts put in as args. Place an unlimited number of them -  each one corresponds to a different hypothesis. 
+            The first array that is input will be the "Standard Model" sample.
+            Both bins and counts can be created using numpy.histogram()
+        stats_check : bool, optional
+            If you want to insert a statistics check enable this option, by default True
+        subtraction_metric : bool, optional
+            If you want to use the metric that does subtraction. If false, it uses version of the metric that uses division, by default True
+        weights : numpy.ndarray, optional
+            A list of weights of the same length as the number of counts put in for each hypothesis. If None all weights are 1, by default None
+
+        Raises
+        ------
+        ValueError
+            If your bin counts are not all the same length, raise an error
+        ValueError
+            If len(counts) != len(bins) - 1 then raise an error
+        ValueError
+            If len(weights) != len(counts) then raise an error
+        """
         super().__init__(bins, *counts, stats_check=stats_check, subtraction_metric=subtraction_metric, weights=weights)
         self.weights = np.array(weights)
         
