@@ -1,4 +1,5 @@
 import brunelle_merger.brunelle_merger as bm
+import brunelle_merger.ROC_tools as ROC
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as sp
@@ -112,98 +113,6 @@ def clown_metric(counts_1, counts_2):
     """
     return np.sum( np.abs(counts_1 - counts_1)/(counts_1 + counts_2) )
 
-def ROC_curve(sample1, sample2, bins=100, lower=0, upper=1, supplied_counts=False):
-    """This function produces a ROC curve from an attribute like phi, cos(theta1), D_{0-}, etc.
-
-    Parameters
-    ----------
-    sample1 : numpy.ndarray
-        The first data sample for your attribute. This is your "True" data
-    sample2 : numpy.ndarray
-        The second data sample for your attribute. This if your "False" data
-    bins : int or numpy.ndarray, optional
-        The number of bins for the ROC calculation. Can also be given a list of bins., by default 100
-    lower : float
-        The lower end of your sample range
-    upper : float
-        The upper end of your sample range
-    supplied_counts : optional, bool
-        Enable this if the "samples" you are passing are actually counts from a histogram
-    
-
-    Returns
-    -------
-    tuple(numpy.ndarray, numpy.ndarray, float)
-        returns the true rate, the false rate, and the area under the curve (assuming true rate is the x value)
-    """
-    
-    sample1 = np.array(sample1)
-    sample2 = np.array(sample2)
-    
-    if isinstance(bins, int):
-        _, bins = np.histogram([], bins=bins, range=[lower, upper])
-    
-    if not supplied_counts:
-        hypo2_counts, bins = np.histogram(sample2, bins=bins, density=True)
-        hypo2_counts /= hypo2_counts.sum()
-        
-        hypo1_counts, _ = np.histogram(sample1, bins=bins, density=True)
-        hypo1_counts /= hypo1_counts.sum()
-    else:
-        hypo1_counts = sample1.copy()/sample1.sum()
-        hypo2_counts = sample2.copy()/sample2.sum()
-        
-    
-    # print(list(g1_phi_counts))
-    # print()
-    # print(list(g4_phi_counts))
-    
-    ratios = sorted(
-        list(enumerate(hypo1_counts/hypo2_counts)), key=lambda x: x[1], reverse=True
-    )
-    # print(ratios)
-    
-    ratios = np.array(ratios)[:,0].astype(int) #gets the bin indices only for the ordered ratio pairs
-    ratios[~np.isfinite(ratios)] = 0
-    # print(ratios)
-    # print()
-    length = len(ratios) + 1
-    
-    PAC = np.zeros(length) #"positive" above cutoff
-    PBC = np.zeros(length) #"positive" below cutoff
-    NAC = np.zeros(length) #"negative" above cutoff
-    NBC = np.zeros(length) #"negative" below cutoff
-    
-    
-    for n in range(length):
-        above_cutoff = ratios[n:]
-        below_cutoff = ratios[:n]
-        
-        PAC[n] = hypo1_counts[above_cutoff].sum() #gets the indices listed
-        PBC[n] = hypo1_counts[below_cutoff].sum()
-        
-        NAC[n] = hypo2_counts[above_cutoff].sum()
-        NBC[n] = hypo2_counts[below_cutoff].sum()
-        
-        # for bin_index in above_cutoff: #The above lines are the same as this commented code but vectorized
-        #     PAC += g1_phi_counts[bin_index]
-        #     NAC += g4_phi_counts[bin_index]
-        
-        # for bin_index in below_cutoff:
-        #     PBC += g1_phi_counts[bin_index]
-        #     NBC += g4_phi_counts[bin_index]
-        # TPR.append(1 - PAC/(PAC + PBC))
-        # FPR.append(1 - NAC/(NAC + NBC))
-        
-        
-    TPR = PAC/(PAC + PBC) #vectorized calculation
-    FPR = NAC/(NAC + NBC)
-    
-    TPR[~np.isfinite(TPR)] = 0
-    FPR[~np.isfinite(FPR)] = 0
-    
-    return TPR, FPR, np.abs(np.trapz(FPR, TPR))
-
 def run_test(stats_check, bins_wanted, subtraction_metric):
 
     # counts_sm, edges = np.histogramdd([sm_data[i] for i in branches], 20,
@@ -312,19 +221,19 @@ def run_test(stats_check, bins_wanted, subtraction_metric):
         
         # print("grim counts:", grim_counts[i], grim_counts[i].shape)
         # print("grim bins:", grim_bins[i])
-        TPR, FPR, score = ROC_curve(grim_counts[i][0], grim_counts[i][1], grim_bins[i], supplied_counts=True)
+        TPR, FPR, score = ROC.positive_ROC(grim_counts[i][0], grim_counts[i][1])
         ax[7].plot(TPR, FPR, label="GRIM METRIC")
         ax[2].hist([sm_data[key], ps_data[key]], grim_bins[i], label=[r'$0^+$', r'$0^-$'], histtype='step', lw=3)
         ax[2].set_title("{:.3f}".format(score) + ": GRIM METRIC")
     #     plt.plot(TPR, FPR, label="{:.3f}".format(score) + ": GRIM METRIC", lw=3)
         
-        TPR, FPR, score = ROC_curve(heshy_counts[i][0], heshy_counts[i][1], heshy_bins[i], supplied_counts=True)
+        TPR, FPR, score = ROC.positive_ROC(heshy_counts[i][0], heshy_counts[i][1])
         ax[7].plot(TPR, FPR, label="HESHY ALGO")
         hep.histplot([heshy_counts[i][0], heshy_counts[i][1]], heshy_bins[i], label=[r'$0^+$', r'$0^-$'], histtype='step', lw=3, ax=ax[3])
         # ax[3].hist([sm_data[key], ps_data[key]], heshy_bins[i], label=[r'$0^+$', r'$0^-$'], histtype='step', lw=3)
         ax[3].set_title("{:.3f}".format(score) + ": HESHY ALGO")
         
-        TPR, FPR, score = ROC_curve(*nonlocal_counts[i], nonlocal_bins[i], supplied_counts=True)
+        TPR, FPR, score = ROC.positive_ROC(*nonlocal_counts[i])
         ax[7].plot(TPR, FPR, label="NONLOCAL ALGO")
         hep.histplot([nonlocal_counts[i][0], nonlocal_counts[i][1]], nonlocal_bins[i], label=[r'$0^+$', r'$0^-$'], histtype='step', lw=3, ax=ax[4])
         ax[4].set_title("{:.3f}".format(score) + ": NONLOCAL ALGO")
@@ -334,13 +243,13 @@ def run_test(stats_check, bins_wanted, subtraction_metric):
         # ax[5].hist([sm_data[key], ps_data[key]], grim_bins_fast[i], label=[r'$0^+$', r'$0^-$'], histtype='step', lw=3)
         # ax[5].set_title("{:.3f}".format(score) + ": FAST GRIM METRIC")
         
-        TPR, FPR, score = ROC_curve(OG_counts[i][0], OG_counts[i][1], OG_edges[i], supplied_counts=True)
+        TPR, FPR, score = ROC.positive_ROC(OG_counts[i][0], OG_counts[i][1])
         ax[7].plot(TPR, FPR, label="UNMERGED")
         hep.histplot([OG_counts[i][0], OG_counts[i][1]], OG_edges[i], label=[r'$0^+$', r'$0^-$'], histtype='step', lw=3, ax=ax[1])
         # ax[1].hist([sm_data[key], ps_data[key]], OG_edges[i], label=[r'$0^+$', r'$0^-$'], histtype='step', lw=3)
         ax[1].set_title("{:.3f}".format(score) + ": UNMERGED")
         
-        TPR, FPR, score = ROC_curve(post_merge_counts[i][0], post_merge_counts[i][1], post_merge_bins[i], supplied_counts=True)
+        TPR, FPR, score = ROC.positive_ROC(post_merge_counts[i][0], post_merge_counts[i][1])
         ax[7].plot(TPR, FPR, label="STATS MERGE")
         hep.histplot([post_merge_counts[i][0], post_merge_counts[i][1]], post_merge_bins[i], label=[r'$0^+$', r'$0^-$'], histtype='step', lw=3, ax=ax[6])
         # ax[6].hist([sm_data[key], ps_data[key]], post_merge_bins[i], label=[r'$0^+$', r'$0^-$'], histtype='step', lw=3)
@@ -373,27 +282,27 @@ def run_test(stats_check, bins_wanted, subtraction_metric):
         
 
 if __name__ == "__main__":
-    data = uproot.open('test_data/data.root')
+    # data = uproot.open('test_data/data.root')
     
-    branches = ['Z1Mass', 'Z2Mass', 'helphi', 'helcosthetaZ1', 'helcosthetaZ2']
-    sm_data = data['sm'].arrays(branches, library='np')
-    ps_data = data['ps'].arrays(branches, library='np')
+    # branches = ['Z1Mass', 'Z2Mass', 'helphi', 'helcosthetaZ1', 'helcosthetaZ2']
+    # sm_data = data['sm'].arrays(branches, library='np')
+    # ps_data = data['ps'].arrays(branches, library='np')
     
-    counts_sm = [None]*5
-    counts_ps = [None]*5
-    edges = [None]*5    
+    # counts_sm = [None]*5
+    # counts_ps = [None]*5
+    # edges = [None]*5    
     
-    ranges = [
-        None,
-        None,
-        [-3.14, 3.14],
-        [-1,1],
-        [-1,1]
-    ]
+    # ranges = [
+    #     None,
+    #     None,
+    #     [-3.14, 3.14],
+    #     [-1,1],
+    #     [-1,1]
+    # ]
     
-    for n, i in enumerate(branches):
-        counts_sm[n], edges[n] = np.histogram(sm_data[i], 100, range=ranges[n], density=True)
-        counts_ps[n], _ = np.histogram(ps_data[i], edges[n], density=True)
+    # for n, i in enumerate(branches):
+    #     counts_sm[n], edges[n] = np.histogram(sm_data[i], 100, range=ranges[n], density=True)
+    #     counts_ps[n], _ = np.histogram(ps_data[i], edges[n], density=True)
     
     
     
@@ -403,22 +312,31 @@ if __name__ == "__main__":
     #             run_test(stat_check, n_bins, subtraction_metric)
     #             print()
     
-    nonlocal_bins = [None]*5
-    nonlocal_counts = [None]*5
-    bins_wanted=5
+    # nonlocal_bins = [None]*5
+    # nonlocal_counts = [None]*5
+    # bins_wanted=5
     
-    for i in range(len(branches)):
-        x = counts_sm[i]
-        xp = counts_ps[i]
+    # for i in range(len(branches)):
+    #     x = counts_sm[i]
+    #     xp = counts_ps[i]
         
-        dim_bins = bm.Grim_Brunelle_nonlocal(edges[i], x.copy(), xp.copy(), stats_check=False, subtraction_metric=True)
-        start3 = time.time()
-        nonlocal_counts[i], temp_bins = dim_bins.run(bins_wanted, track=True)
-        end3 = time.time()
-        tracked_points = dim_bins.tracker
-        nonlocal_bins[i] = temp_bins.copy()
-        print("Nonlocal:", end3 - start3)
+    #     dim_bins = bm.Grim_Brunelle_nonlocal(edges[i], x.copy(), xp.copy(), stats_check=False, subtraction_metric=True)
+    #     start3 = time.time()
+    #     nonlocal_counts[i], temp_bins = dim_bins.run(bins_wanted, track=True)
+    #     end3 = time.time()
+    #     tracked_points = dim_bins.tracker
+    #     nonlocal_bins[i] = temp_bins.copy()
+    #     print("Nonlocal:", end3 - start3)
         
-        print(tracked_points)
+    #     print(tracked_points)
     
-    os.system('mv *.png plots/')
+    # os.system('mv *.png plots/')
+    
+    
+    
+    
+    x = np.linspace(0, 2*np.pi, 50)
+    y1 = np.abs(np.sin(x))
+    y2 = np.sin(x)**2
+    
+    ROC.giga_ROC(y1, y2)
