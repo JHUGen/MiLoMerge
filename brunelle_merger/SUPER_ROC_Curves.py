@@ -1,0 +1,160 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.patches
+
+
+class SUPER_ROC_Curves(object):
+    def __init__(self) -> None:
+        """A nice collection of ROC curves
+        """
+        self.curves = {}
+    
+    def add_ROC(self, sample1, sample2, name=None):
+        """Generates ROC curves based off of the samples you give it and an optional name.
+        Will return the requisite values, but will also store them in self.curves
+
+        **>= 1 sample must be *completely* positive**
+        
+        Parameters
+        ----------
+        sample1 : numpy.ndarray
+            This is an array of histogram bin counts
+        sample2 : numpy.ndarray
+            This is an array of histogram bin counts
+        name : str, optional
+            The name you want to give you sample. If none - the name will be an assigned number, by default None
+            
+        Returns
+        -------
+        Tuple(numpy.ndarray, numpy.ndarray, float)
+            A tuple of the Sample 1 axis, Sample 2 axis, and the "score" between these 2 samples
+        """
+        sample1 = np.array(sample1)
+        sample2 = np.array(sample2)
+        
+        hypo1_counts = sample1.copy()/np.abs(sample1).sum()
+        hypo2_counts = sample2.copy()/np.abs(sample2).sum()
+        
+        division_terms = hypo2_counts/hypo1_counts
+        
+        division_terms[~np.isfinite(division_terms)] = 0
+        
+        ratios = np.array(
+            sorted(
+                list(enumerate(division_terms)), key=lambda x: x[1]
+            )
+        )
+
+        indices = ratios[:,0].astype(int) #gets the bin indices only for the ordered ratio pairs
+    
+        length = len(indices) + 1 #the extra value allows for the addition of the final end point
+        
+        PAC = np.zeros(length) #"positive" above cutoff
+        PAC_numerator = np.zeros(length)
+        PBC = np.zeros(length) #"positive" below cutoff
+        NAC = np.zeros(length) #"negative" above cutoff
+        NAC_numerator = np.zeros(length)
+        NBC = np.zeros(length) #"negative" below cutoff
+        
+        for n in range(length):
+            above_cutoff = indices[n:]
+            below_cutoff = indices[:n]
+            
+            PAC[n] = np.abs(hypo1_counts[above_cutoff]).sum() #gets the indices listed
+            PAC_numerator[n] = hypo1_counts[below_cutoff].sum() #only the numerator preserves sign
+            PBC[n] = np.abs(hypo1_counts[below_cutoff]).sum()
+            
+            NAC[n] = np.abs(hypo2_counts[above_cutoff]).sum()
+            NAC_numerator[n] = hypo2_counts[below_cutoff].sum()
+            NBC[n] = np.abs(hypo2_counts[below_cutoff]).sum()
+        
+        
+        TPR = PAC_numerator/(PAC + PBC) #vectorized calculation
+        FPR = NAC_numerator/(NAC + NBC)
+        
+        
+        
+        turning_point = np.argmin(TPR) #this is the turning point change in sign indicates turning point! Sign changes at max negative value
+        
+        
+        negative_gradient = TPR[:turning_point], FPR[:turning_point] #now there are two curves, positive and negative
+        positive_gradient = TPR[turning_point:], FPR[turning_point:]
+        apex_x = TPR[turning_point]
+        apex_y = FPR[turning_point]        
+        # TRANSFORM THE CURVES TO THE POSITIVE REGIME
+        negative_gradient = np.array((-apex_x + negative_gradient[0], negative_gradient[1] + apex_y))
+        positive_gradient = np.array((-apex_x + positive_gradient[0], positive_gradient[1] - apex_y))
+        
+        
+        #ORIGINAL PLOT
+        plt.plot(TPR[np.isfinite(TPR) & np.isfinite(FPR)], FPR[np.isfinite(TPR) & np.isfinite(FPR)])
+        plt.show()
+        
+        new_TPR = np.concatenate( (positive_gradient[0], negative_gradient[0]) ) #new curves!
+        new_FPR = np.concatenate( (positive_gradient[1], negative_gradient[1]) )
+        
+        # if self.bounding_box_scale_factor == None:
+        BBB = np.max(new_TPR), np.max(FPR) #"Big Bounding Box"
+        scale_x, scale_y = 1/BBB[0], 1/BBB[1]
+        
+        new_TPR *= scale_x
+        positive_gradient[0] *= scale_x
+        negative_gradient[0] *= scale_x
+        
+        new_FPR *= scale_y
+        positive_gradient[1] *= scale_y
+        negative_gradient[1] *= scale_y
+        
+        area_below_bottom_line = np.trapz(*positive_gradient[::-1])
+        area_below_top_line = np.trapz(*negative_gradient[::-1])*-1 #the negative gradient curve goes in the opposite direction so just multiply by -1 for trapezoid rule        
+        
+        plt.plot(new_TPR, new_FPR)
+        
+        
+        rect = matplotlib.patches.Rectangle((0,0),1,1, lw=3, zorder=np.inf)
+        rect.fill = False
+        ax = plt.gca()
+        
+        ax.fill_between(*positive_gradient, 1, color='red', alpha=0.5)
+        ax.fill_between(*negative_gradient, 1, color='white')
+        ax.add_patch(rect)
+        # print("POS:", positive_gradient)
+        # print("NEG:", negative_gradient)
+        # print()
+        plt.show()
+        
+        if name == None:
+            name = str(len(self.curves.keys()))
+        
+        self.curves[str(name)] = new_TPR, new_FPR, np.abs(area_below_top_line - area_below_bottom_line)
+        
+        return new_TPR, new_FPR, np.abs(area_below_top_line - area_below_bottom_line)
+    
+    def plot_scores(self):
+        """Plots the scores
+        """
+        names = []
+        scores = []
+        for named_curve in self.curves:
+            names.append(named_curve)
+            scores.append(self.curves[named_curve][2])
+        plt.scatter(names, scores)
+        plt.show()
+    
+    def plot_ROCs(self):
+        """Plots every ROC Curve on a single plot
+        """
+        x_vals = []
+        y_vals = []
+        scores = []
+        names = []
+        for named_curves in self.curves:
+            names.append(named_curves)
+            x,y,s = self.curves[named_curves]
+            x_vals.append(x)
+            y_vals.append(y)
+            scores.append(s)
+        
+        for i in range(len(x_vals)):
+            plt.plot(x_vals[i], y_vals[i], label="names[i]: {:.3f}".format(scores[i]))
+        plt.show()

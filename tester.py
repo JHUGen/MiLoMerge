@@ -1,5 +1,5 @@
 import brunelle_merger.brunelle_merger as bm
-import brunelle_merger.ROC_tools as ROC
+import brunelle_merger.SUPER_ROC_Curves as ROC
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as sp
@@ -281,28 +281,28 @@ def run_test(stats_check, bins_wanted, subtraction_metric):
         plt.close(fig)
         
 
-if __name__ == "__main__":
-    # data = uproot.open('test_data/data.root')
+if __name__ == "__main__": #TEST DATA!!
+    data = uproot.open('test_data/data.root')
     
-    # branches = ['Z1Mass', 'Z2Mass', 'helphi', 'helcosthetaZ1', 'helcosthetaZ2']
-    # sm_data = data['sm'].arrays(branches, library='np')
-    # ps_data = data['ps'].arrays(branches, library='np')
+    branches = ['Z1Mass', 'Z2Mass', 'helphi', 'helcosthetaZ1', 'helcosthetaZ2']
+    sm_data = data['sm'].arrays(branches, library='np')
+    ps_data = data['ps'].arrays(branches, library='np')
     
-    # counts_sm = [None]*5
-    # counts_ps = [None]*5
-    # edges = [None]*5    
+    counts_sm = [None]*5
+    counts_ps = [None]*5
+    edges = [None]*5    
     
-    # ranges = [
-    #     None,
-    #     None,
-    #     [-3.14, 3.14],
-    #     [-1,1],
-    #     [-1,1]
-    # ]
+    ranges = [
+        None,
+        None,
+        [-3.14, 3.14],
+        [-1,1],
+        [-1,1]
+    ]
     
-    # for n, i in enumerate(branches):
-    #     counts_sm[n], edges[n] = np.histogram(sm_data[i], 100, range=ranges[n], density=True)
-    #     counts_ps[n], _ = np.histogram(ps_data[i], edges[n], density=True)
+    for n, i in enumerate(branches):
+        counts_sm[n], edges[n] = np.histogram(sm_data[i], 100, range=ranges[n], density=True)
+        counts_ps[n], _ = np.histogram(ps_data[i], edges[n], density=True)
     
     
     
@@ -312,31 +312,22 @@ if __name__ == "__main__":
     #             run_test(stat_check, n_bins, subtraction_metric)
     #             print()
     
-    # nonlocal_bins = [None]*5
-    # nonlocal_counts = [None]*5
-    # bins_wanted=5
+    nonlocal_bins = [None]*5
+    nonlocal_counts = [None]*5
+    bins_wanted=5
     
-    # for i in range(len(branches)):
-    #     x = counts_sm[i]
-    #     xp = counts_ps[i]
+    for i in range(len(branches)):
+        x = counts_sm[i]
+        xp = counts_ps[i]
         
-    #     dim_bins = bm.Grim_Brunelle_nonlocal(edges[i], x.copy(), xp.copy(), stats_check=False, subtraction_metric=True)
-    #     start3 = time.time()
-    #     nonlocal_counts[i], temp_bins = dim_bins.run(bins_wanted, track=True)
-    #     end3 = time.time()
-    #     tracked_points = dim_bins.tracker
-    #     nonlocal_bins[i] = temp_bins.copy()
-    #     print("Nonlocal:", end3 - start3)
+        dim_bins = bm.Grim_Brunelle_nonlocal(edges[i], x.copy(), xp.copy(), stats_check=False, subtraction_metric=True)
+        start3 = time.time()
+        nonlocal_counts[i], temp_bins = dim_bins.run(bins_wanted, track=True)
+        end3 = time.time()
+        tracked_points = dim_bins.tracker
+        nonlocal_bins[i] = temp_bins.copy()
+        print("Nonlocal:", end3 - start3)
         
-    #     print(tracked_points)
+        print(tracked_points)
     
-    # os.system('mv *.png plots/')
-    
-    
-    
-    
-    x = np.linspace(0, 2*np.pi, 50)
-    y1 = np.abs(np.sin(x))
-    y2 = np.sin(x)**2
-    
-    ROC.giga_ROC(y1, y2)
+    os.system('mv *.png plots/')

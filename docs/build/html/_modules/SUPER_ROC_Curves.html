@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SUPER_ROC_Curves &mdash; bin_merging  documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            bin_merging
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">brunelle_merger</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">bin_merging</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">SUPER_ROC_Curves</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for SUPER_ROC_Curves</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">matplotlib.patches</span>
+
+
+<div class="viewcode-block" id="SUPER_ROC_Curves"><a class="viewcode-back" href="../SUPER_ROC_Curves.html#SUPER_ROC_Curves.SUPER_ROC_Curves">[docs]</a><span class="k">class</span> <span class="nc">SUPER_ROC_Curves</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;A nice collection of ROC curves</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curves</span> <span class="o">=</span> <span class="p">{}</span>
+    
+<div class="viewcode-block" id="SUPER_ROC_Curves.add_ROC"><a class="viewcode-back" href="../SUPER_ROC_Curves.html#SUPER_ROC_Curves.SUPER_ROC_Curves.add_ROC">[docs]</a>    <span class="k">def</span> <span class="nf">add_ROC</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample1</span><span class="p">,</span> <span class="n">sample2</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generates ROC curves based off of the samples you give it and an optional name.</span>
+<span class="sd">        Will return the requisite values, but will also store them in self.curves</span>
+
+<span class="sd">        **&gt;= 1 sample must be *completely* positive**</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sample1 : numpy.ndarray</span>
+<span class="sd">            This is an array of histogram bin counts</span>
+<span class="sd">        sample2 : numpy.ndarray</span>
+<span class="sd">            This is an array of histogram bin counts</span>
+<span class="sd">        name : str, optional</span>
+<span class="sd">            The name you want to give you sample. If none - the name will be an assigned number, by default None</span>
+<span class="sd">            </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Tuple(numpy.ndarray, numpy.ndarray, float)</span>
+<span class="sd">            A tuple of the Sample 1 axis, Sample 2 axis, and the &quot;score&quot; between these 2 samples</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sample1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sample1</span><span class="p">)</span>
+        <span class="n">sample2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sample2</span><span class="p">)</span>
+        
+        <span class="n">hypo1_counts</span> <span class="o">=</span> <span class="n">sample1</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">sample1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">hypo2_counts</span> <span class="o">=</span> <span class="n">sample2</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">sample2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        
+        <span class="n">division_terms</span> <span class="o">=</span> <span class="n">hypo2_counts</span><span class="o">/</span><span class="n">hypo1_counts</span>
+        
+        <span class="n">division_terms</span><span class="p">[</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">division_terms</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="n">ratios</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+            <span class="nb">sorted</span><span class="p">(</span>
+                <span class="nb">list</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">division_terms</span><span class="p">)),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">ratios</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span> <span class="c1">#gets the bin indices only for the ordered ratio pairs</span>
+    
+        <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span> <span class="c1">#the extra value allows for the addition of the final end point</span>
+        
+        <span class="n">PAC</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">length</span><span class="p">)</span> <span class="c1">#&quot;positive&quot; above cutoff</span>
+        <span class="n">PAC_numerator</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">length</span><span class="p">)</span>
+        <span class="n">PBC</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">length</span><span class="p">)</span> <span class="c1">#&quot;positive&quot; below cutoff</span>
+        <span class="n">NAC</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">length</span><span class="p">)</span> <span class="c1">#&quot;negative&quot; above cutoff</span>
+        <span class="n">NAC_numerator</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">length</span><span class="p">)</span>
+        <span class="n">NBC</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">length</span><span class="p">)</span> <span class="c1">#&quot;negative&quot; below cutoff</span>
+        
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">length</span><span class="p">):</span>
+            <span class="n">above_cutoff</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="n">n</span><span class="p">:]</span>
+            <span class="n">below_cutoff</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[:</span><span class="n">n</span><span class="p">]</span>
+            
+            <span class="n">PAC</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">hypo1_counts</span><span class="p">[</span><span class="n">above_cutoff</span><span class="p">])</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="c1">#gets the indices listed</span>
+            <span class="n">PAC_numerator</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">hypo1_counts</span><span class="p">[</span><span class="n">below_cutoff</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="c1">#only the numerator preserves sign</span>
+            <span class="n">PBC</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">hypo1_counts</span><span class="p">[</span><span class="n">below_cutoff</span><span class="p">])</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            
+            <span class="n">NAC</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">hypo2_counts</span><span class="p">[</span><span class="n">above_cutoff</span><span class="p">])</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="n">NAC_numerator</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">hypo2_counts</span><span class="p">[</span><span class="n">below_cutoff</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="n">NBC</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">hypo2_counts</span><span class="p">[</span><span class="n">below_cutoff</span><span class="p">])</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        
+        
+        <span class="n">TPR</span> <span class="o">=</span> <span class="n">PAC_numerator</span><span class="o">/</span><span class="p">(</span><span class="n">PAC</span> <span class="o">+</span> <span class="n">PBC</span><span class="p">)</span> <span class="c1">#vectorized calculation</span>
+        <span class="n">FPR</span> <span class="o">=</span> <span class="n">NAC_numerator</span><span class="o">/</span><span class="p">(</span><span class="n">NAC</span> <span class="o">+</span> <span class="n">NBC</span><span class="p">)</span>
+        
+        
+        
+        <span class="n">turning_point</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">TPR</span><span class="p">)</span> <span class="c1">#this is the turning point change in sign indicates turning point! Sign changes at max negative value</span>
+        
+        
+        <span class="n">negative_gradient</span> <span class="o">=</span> <span class="n">TPR</span><span class="p">[:</span><span class="n">turning_point</span><span class="p">],</span> <span class="n">FPR</span><span class="p">[:</span><span class="n">turning_point</span><span class="p">]</span> <span class="c1">#now there are two curves, positive and negative</span>
+        <span class="n">positive_gradient</span> <span class="o">=</span> <span class="n">TPR</span><span class="p">[</span><span class="n">turning_point</span><span class="p">:],</span> <span class="n">FPR</span><span class="p">[</span><span class="n">turning_point</span><span class="p">:]</span>
+        <span class="n">apex_x</span> <span class="o">=</span> <span class="n">TPR</span><span class="p">[</span><span class="n">turning_point</span><span class="p">]</span>
+        <span class="n">apex_y</span> <span class="o">=</span> <span class="n">FPR</span><span class="p">[</span><span class="n">turning_point</span><span class="p">]</span>        
+        <span class="c1"># TRANSFORM THE CURVES TO THE POSITIVE REGIME</span>
+        <span class="n">negative_gradient</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="o">-</span><span class="n">apex_x</span> <span class="o">+</span> <span class="n">negative_gradient</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">negative_gradient</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">apex_y</span><span class="p">))</span>
+        <span class="n">positive_gradient</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="o">-</span><span class="n">apex_x</span> <span class="o">+</span> <span class="n">positive_gradient</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">positive_gradient</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">apex_y</span><span class="p">))</span>
+        
+        
+        <span class="c1">#ORIGINAL PLOT</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">TPR</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">TPR</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">FPR</span><span class="p">)],</span> <span class="n">FPR</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">TPR</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">FPR</span><span class="p">)])</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        
+        <span class="n">new_TPR</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span> <span class="p">(</span><span class="n">positive_gradient</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">negative_gradient</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="p">)</span> <span class="c1">#new curves!</span>
+        <span class="n">new_FPR</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span> <span class="p">(</span><span class="n">positive_gradient</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">negative_gradient</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="p">)</span>
+        
+        <span class="c1"># if self.bounding_box_scale_factor == None:</span>
+        <span class="n">BBB</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">new_TPR</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">FPR</span><span class="p">)</span> <span class="c1">#&quot;Big Bounding Box&quot;</span>
+        <span class="n">scale_x</span><span class="p">,</span> <span class="n">scale_y</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="n">BBB</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="o">/</span><span class="n">BBB</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        
+        <span class="n">new_TPR</span> <span class="o">*=</span> <span class="n">scale_x</span>
+        <span class="n">positive_gradient</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*=</span> <span class="n">scale_x</span>
+        <span class="n">negative_gradient</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*=</span> <span class="n">scale_x</span>
+        
+        <span class="n">new_FPR</span> <span class="o">*=</span> <span class="n">scale_y</span>
+        <span class="n">positive_gradient</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*=</span> <span class="n">scale_y</span>
+        <span class="n">negative_gradient</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*=</span> <span class="n">scale_y</span>
+        
+        <span class="n">area_below_bottom_line</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="o">*</span><span class="n">positive_gradient</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">area_below_top_line</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="o">*</span><span class="n">negative_gradient</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">*-</span><span class="mi">1</span> <span class="c1">#the negative gradient curve goes in the opposite direction so just multiply by -1 for trapezoid rule        </span>
+        
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">new_TPR</span><span class="p">,</span> <span class="n">new_FPR</span><span class="p">)</span>
+        
+        
+        <span class="n">rect</span> <span class="o">=</span> <span class="n">matplotlib</span><span class="o">.</span><span class="n">patches</span><span class="o">.</span><span class="n">Rectangle</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">)</span>
+        <span class="n">rect</span><span class="o">.</span><span class="n">fill</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+        
+        <span class="n">ax</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="o">*</span><span class="n">positive_gradient</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="o">*</span><span class="n">negative_gradient</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">add_patch</span><span class="p">(</span><span class="n">rect</span><span class="p">)</span>
+        <span class="c1"># print(&quot;POS:&quot;, positive_gradient)</span>
+        <span class="c1"># print(&quot;NEG:&quot;, negative_gradient)</span>
+        <span class="c1"># print()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curves</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">curves</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)]</span> <span class="o">=</span> <span class="n">new_TPR</span><span class="p">,</span> <span class="n">new_FPR</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">area_below_top_line</span> <span class="o">-</span> <span class="n">area_below_bottom_line</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">new_TPR</span><span class="p">,</span> <span class="n">new_FPR</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">area_below_top_line</span> <span class="o">-</span> <span class="n">area_below_bottom_line</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="SUPER_ROC_Curves.plot_scores"><a class="viewcode-back" href="../SUPER_ROC_Curves.html#SUPER_ROC_Curves.SUPER_ROC_Curves.plot_scores">[docs]</a>    <span class="k">def</span> <span class="nf">plot_scores</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plots the scores</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">named_curve</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">curves</span><span class="p">:</span>
+            <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">named_curve</span><span class="p">)</span>
+            <span class="n">scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curves</span><span class="p">[</span><span class="n">named_curve</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">scores</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+    
+<div class="viewcode-block" id="SUPER_ROC_Curves.plot_ROCs"><a class="viewcode-back" href="../SUPER_ROC_Curves.html#SUPER_ROC_Curves.SUPER_ROC_Curves.plot_ROCs">[docs]</a>    <span class="k">def</span> <span class="nf">plot_ROCs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plots every ROC Curve on a single plot</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">x_vals</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">y_vals</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">named_curves</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">curves</span><span class="p">:</span>
+            <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">named_curves</span><span class="p">)</span>
+            <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">curves</span><span class="p">[</span><span class="n">named_curves</span><span class="p">]</span>
+            <span class="n">x_vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">y_vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+            <span class="n">scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x_vals</span><span class="p">)):</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_vals</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y_vals</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;names[i]: </span><span class="si">{:.3f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">scores</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, M. Panagioutou, M. Srivastav, L. Kang, A.V. Gritsan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
