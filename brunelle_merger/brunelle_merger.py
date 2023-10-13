@@ -1,116 +1,12 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import mplhep as hep
+import matplotlib as mpl
+import histogram_helpers as h
 
-def print_msg_box(msg, indent=1, width=0, title=""):
-    """returns message-box with optional title.
-    Ripped from https://stackoverflow.com/questions/39969064/how-to-print-a-message-box-in-python
-    
-    Parameters
-    ----------
-    msg : str
-        The message to use
-    indent : int, optional
-        indent size, by default 1
-    width : int, optional
-        box width, by default 0
-    title : str, optional
-        box title, by default ""
-    """
-    
-    lines = msg.split('\n')
-    space = " " * indent
-    if not width:
-        width = max(map(len, lines))
-    box = f'╔{"═" * (width + indent * 2)}╗\n'  # upper_border
-    if title:
-        box += f'║{space}{title:<{width}}{space}║\n'  # title
-        box += f'║{space}{"-" * len(title):<{width}}{space}║\n'  # underscore
-    box += ''.join([f'║{space}{line:<{width}}{space}║\n' for line in lines])
-    box += f'╚{"═" * (width + indent * 2)}╝'  # lower_border
-    return box
-
-def merge_bins(target, bins, *counts, **kwargs):
-    """Merges a set of bins that are given based off of the counts provided
-    Eliminates any bin with a corresponding count that is less than the target
-    Useful to do merge_bins(\*np.histogram(data), ...)
-    
-    
-    Parameters
-    ----------
-    counts : numpy.ndarray
-        The counts of a histogram
-    bins : numpy.ndarray
-        The bins of a histogram
-    target : int, optional
-        The target value to achieve - any counts below this will be merged, by default 0
-    ab_val : bool, optional
-        If on, the target will consider the absolute value of the counts, not the actual value, by default True
-    drop_first : bool, optional
-        If on, the function will not automatically include the first bin edge, by default False
-
-    Returns
-    -------
-    Tuple(numpy.ndarray, numpy.ndarray)
-        A np.histogram object with the bins and counts merged
-
-    Raises
-    ------
-    ValueError
-        If the bins and counts are not sized properly the function will fail
-    """
-    
-    drop_first = kwargs.get('drop_first',False)
-    ab_val = kwargs.get('ab_val', True)
-    
-    new_counts = []
-    [new_counts.append([]) for _ in counts]
-    
-    counts = np.vstack(counts)
-    
-    if any([len(bins) != len(count) + 1 for count in counts]):
-        errortext = "Length of bins is {:.0f}, lengths of counts are ".format(len(bins))
-        errortext += " ".join([str(len(count)) for count in counts])
-        errortext += "\nlen(bins) should be len(counts) + 1!"
-        raise ValueError("\n" + errortext)
-    
-    
-    if not drop_first:
-        new_bins = [bins[0]] #the first bin edge is included automatically if not explicitly stated otherwise
-    else:
-        new_bins = []
-    
-    if ab_val:
-        counts = np.abs(counts)
-    
-    
-    i = 0
-    while i < len(counts[0]):
-        summation = np.zeros(len(counts))
-        start = i
-        # print("starting iteration at:", i)
-        # print("Current running sum is ( {:.3f}, {:.3f} )".format(np.sum(new_counts[0]), np.sum(new_counts[1])))
-        # print("Running sum should be ( {:.3f}, {:.3f} )".format(*np.sum(counts[:,:i], axis=1)))
-        while np.any(summation <= target) and (i < len(counts[0])):
-            summation += counts[:,i]
-            i += 1
-        # print("Merged counts", start, "through", i-1)
-        
-        if drop_first and len(new_bins) == 0:
-            first_bin = max(i - 1, 0)
-            new_bins += [bins[first_bin]]
-            
-        if not( np.any(summation <= target) and (i == len(counts[0])) ):
-            for k in range(len(counts)):
-                new_counts[k] += [np.sum(counts[k][start:i])]
-            new_bins += [bins[i]]
-        else:
-            for k in range(len(counts)):
-                new_counts[k][-1] += np.sum(counts[k][start:i])
-            new_bins[-1] = bins[i]
-        # print("Current running sum is ( {:.3f}, {:.3f} )".format(np.sum(new_counts[0]), np.sum(new_counts[1])))
-        # print("Running sum should be ( {:.3f}, {:.3f} )".format(*np.sum(counts[:,:i], axis=1)))
-        # print()
-        # print()
-    return np.vstack(new_counts), np.array(new_bins)
+# plt.style.use(hep.style.ROOT)
+# mpl.rcParams['axes.labelsize'] = 40
+# mpl.rcParams['xaxis.labellocation'] = 'center'
 
 class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
     #https://engineering.virginia.edu/faculty/nathan-brunelle
@@ -148,18 +44,18 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
             errortext = [str(len(count)) for count in counts]
             errortext = " ".join(errortext)
             errortext = 'Not all counts have same length! Lengths are: ' + errortext
-            errortext = print_msg_box(errortext, title="ERROR")
+            errortext = h.print_msg_box(errortext, title="ERROR")
             raise ValueError('\n'+errortext)
         
         if len(counts[0]) != len(bins) - 1:
             errortext = "Invalid lengths! {:.0f} != {:.0f} + 1".format(len(counts[0]), len(bins))
-            errortext = print_msg_box(errortext, title="ERROR")
+            errortext = h.print_msg_box(errortext, title="ERROR")
             raise ValueError('\n'+errortext)
 
         if weights != None and len(weights) != len(counts):
             errortext = "If using weights, the number of weight values and the number of hypotheses should be the same!"
             errortext += '\nCurrently there are {:.0f} hypotheses and {:.0f} weight value(s)'.format(len(counts), len(weights))
-            errortext = print_msg_box(errortext)
+            errortext = h.print_msg_box(errortext)
             raise ValueError('\n'+errortext)
         
         if weights == None:
@@ -174,6 +70,7 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
 
         self.original_bins = bins.copy()
         self.original_counts = np.vstack(counts)
+        self.original_counts = self.original_counts.astype(float)
         self.original_counts = self.original_counts.T
         self.original_counts /= np.abs(self.original_counts).sum(axis=0)
         self.original_counts = self.original_counts.T
@@ -183,7 +80,7 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
         if not stats_check:
             self.merged_counts, self.post_stats_merge_bins = self.original_counts.copy(), self.original_bins.copy()
         else:
-            self.merged_counts, self.post_stats_merge_bins = merge_bins(0.05*np.mean( stats_for_mean ), 
+            self.merged_counts, self.post_stats_merge_bins = h.merge_bins(0.05*np.mean( stats_for_mean ), 
                                             bins, 
                                             *self.original_counts.copy()
                                             )
@@ -501,9 +398,13 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
     
         self.tracker = [ {} ]
         for i in range(self.n_items):
-            self.tracker[0][i] = (i, i) #record where it started, and where it ended
+            self.tracker[0][i] = i #record where it started, and where it ended
+        
+        self.things_to_recalculate = tuple([i for i in range(self.n_items)])
+        
+        self.scores = np.zeros((self.n_items, self.n_items))
     
-    def __trace__(self, i):
+    def __trace__(self, i, iter_num):
         """WIP. Trying to trace the placement of where bins go
 
         Parameters
@@ -517,15 +418,17 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
             what index i used to be
         """
         # print(self.tracker)
-        og_i = i
-        while self.tracker[-1][i][1] != i:
-            # print("Trying to match", i, "with", self.tracker[i])
-            i = self.tracker[-1][i][1]
-        print(og_i, "points to", i)
-        print('\n')
-        return i
+        index_dict = self.tracker[iter_num]
+        if iter_num == 0:
+            return [index_dict[i]]
+        
+        indices_within_this_bin = []
+        for previous_index in index_dict[i]:
+            indices_within_this_bin += self.__trace__(previous_index, iter_num - 1)
+        
+        return tuple(indices_within_this_bin)
     
-    def __merge__(self, i, j, track=False):
+    def __merge__(self, i, j, track):
         """Merges bins together by bin count index
 
         Parameters
@@ -534,8 +437,8 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
             index i
         j : int
             index j
-        track : bool, optional
-            Whether you would like to track the placement of where the original bins go in the nonlocal case, by default False
+        track : bool
+            Whether you would like to track the placement of where the original bins go in the nonlocal case
 
         Returns
         -------
@@ -544,21 +447,24 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         """
         merged_counts = np.zeros(shape=(self.n, self.n_items - 1), dtype=float)
         k = 0
+        current_iteration_tracker = {}
         for n in range(self.n_items):
             if n != i and n != j:
                 if track:
-                    self.tracker[n] = k
+                    current_iteration_tracker[k] = tuple([n])
                 merged_counts[:,k] = self.counts_to_merge[:,n]
                 k += 1
         
         if track:
-            self.tracker[i] = k
-            self.tracker[j] = k
+            current_iteration_tracker[k] = (i, j)
+        self.things_to_recalculate = tuple([k])
         
         merged_counts[:,k] = self.counts_to_merge[:,i] + self.counts_to_merge[:,j] #shove everything into the final bin
         self.n_items -= 1
         
         self.counts_to_merge = merged_counts
+        
+        self.tracker.append(current_iteration_tracker)
         
         return self.counts_to_merge
 
@@ -579,6 +485,10 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         smallest_distance = (np.inf, None, None)
         for i in range(self.n_items):
             for j in range(i):
+                
+                if i == j:
+                    self.scores[i][j] == np.inf
+                
                 temp_dist = self.__MLM__(i, j)
                 if temp_dist < smallest_distance[0]:
                     smallest_distance = (temp_dist, i, j)
@@ -607,9 +517,35 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         # print("RUNNING NONLOCAL", self.n_items, target_bin_number)
         while self.n_items > target_bin_number:
             distance, i, j = self.__closest_pair__()
-            self.__merge__(i,j, track=track)
+            self.__merge__(i,j, track)
     
         return self.counts_to_merge, np.array(range(self.n_items+1))
+    
+    def visualize_changes(self, xlabel=None, fname=""):
+        if len(self.tracker) == 1:
+            errortext = "Need to have used the run command with track=True to visualize this!"
+            raise RuntimeError('\n' + h.print_msg_box(errortext, title="ERROR"))
+        plt.close('all')
+        centers = (self.post_stats_merge_bins[1:] + self.post_stats_merge_bins[:-1])/2
+        
+        color_wheel = iter(plt.cm.rainbow(np.linspace(0, 1, self.n_items)))
+        for bin_index in self.tracker[-1].keys():
+            indices = self.__trace__(bin_index, len(self.tracker) - 1)
+            c = next(color_wheel)
+            for index in indices:
+                plt.scatter(centers[index], self.merged_counts[0][index], color=c, marker='o', s=50)
+                plt.scatter(centers[index], self.merged_counts[1][index], color=c, marker='P', s=50)
+        
+        if xlabel == None:
+            "Distribution Clustering"
+        else:
+            xlabel = "Nonlocal clustering for " + xlabel
+        plt.title("Merging Non-locally to {:.0f} bins from {:.0f} bins".format(self.n_items, len(self.merged_counts[0])))
+        plt.xlabel(xlabel)
+        plt.tight_layout()
+        if fname:
+            plt.savefig(fname + '.png')
+        plt.show()
     
 class Grim_Brunelle_nonlocal_with_standard_model(Grim_Brunelle_nonlocal):
     def __init__(self, bins, *counts, stats_check=True, subtraction_metric=True, weights=None) -> None:

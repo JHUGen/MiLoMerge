@@ -87,8 +87,8 @@ class SUPER_ROC_Curves(object):
         
         
         #ORIGINAL PLOT
-        plt.plot(TPR[np.isfinite(TPR) & np.isfinite(FPR)], FPR[np.isfinite(TPR) & np.isfinite(FPR)])
-        plt.show()
+        # plt.plot(TPR[np.isfinite(TPR) & np.isfinite(FPR)], FPR[np.isfinite(TPR) & np.isfinite(FPR)])
+        # plt.show()
         
         new_TPR = np.concatenate( (positive_gradient[0], negative_gradient[0]) ) #new curves!
         new_FPR = np.concatenate( (positive_gradient[1], negative_gradient[1]) )
@@ -108,20 +108,20 @@ class SUPER_ROC_Curves(object):
         area_below_bottom_line = np.trapz(*positive_gradient[::-1])
         area_below_top_line = np.trapz(*negative_gradient[::-1])*-1 #the negative gradient curve goes in the opposite direction so just multiply by -1 for trapezoid rule        
         
-        plt.plot(new_TPR, new_FPR)
+        # plt.plot(new_TPR, new_FPR)
         
         
-        rect = matplotlib.patches.Rectangle((0,0),1,1, lw=3, zorder=np.inf)
-        rect.fill = False
-        ax = plt.gca()
+        # rect = matplotlib.patches.Rectangle((0,0),1,1, lw=3, zorder=np.inf)
+        # rect.fill = False
+        # ax = plt.gca()
         
-        ax.fill_between(*positive_gradient, 1, color='red', alpha=0.5)
-        ax.fill_between(*negative_gradient, 1, color='white')
-        ax.add_patch(rect)
-        # print("POS:", positive_gradient)
-        # print("NEG:", negative_gradient)
-        # print()
-        plt.show()
+        # ax.fill_between(*positive_gradient, 1, color='red', alpha=0.5)
+        # ax.fill_between(*negative_gradient, 1, color='white')
+        # ax.add_patch(rect)
+        # # print("POS:", positive_gradient)
+        # # print("NEG:", negative_gradient)
+        # # print()
+        # plt.show()
         
         if name == None:
             name = str(len(self.curves.keys()))
@@ -158,3 +158,82 @@ class SUPER_ROC_Curves(object):
         for i in range(len(x_vals)):
             plt.plot(x_vals[i], y_vals[i], label="names[i]: {:.3f}".format(scores[i]))
         plt.show()
+
+def ROC_curve(sample1, sample2):
+    """This function produces a ROC curve from an attribute like phi, cos(theta1), D_{0-}, etc.
+
+    Parameters
+    ----------
+    sample1 : numpy.ndarray
+        The first data sample for your attribute. This is your "True" data
+    sample2 : numpy.ndarray
+        The second data sample for your attribute. This if your "False" data
+    bins : int or numpy.ndarray, optional
+        The number of bins for the ROC calculation. Can also be given a list of bins., by default 100
+    lower : float
+        The lower end of your sample range
+    upper : float
+        The upper end of your sample range
+    
+
+    Returns
+    -------
+    tuple(numpy.ndarray, numpy.ndarray, float)
+        returns the true rate, the false rate, and the area under the curve (assuming true rate is the x value)
+    """
+    
+    sample1 = np.array(sample1)
+    sample2 = np.array(sample2)
+    hypo1_counts = sample1.copy()/sample1.sum()
+    hypo2_counts = sample2.copy()/sample2.sum()
+        
+    
+    # print(list(g1_phi_counts))
+    # print()
+    # print(list(g4_phi_counts))
+    
+    ratios = sorted(
+        list(enumerate(hypo1_counts/hypo2_counts)), key=lambda x: x[1], reverse=True
+    )
+    # print(ratios)
+    
+    ratios = np.array(ratios)[:,0].astype(int) #gets the bin indices only for the ordered ratio pairs
+    ratios[~np.isfinite(ratios)] = 0
+    # print(ratios)
+    # print()
+    length = len(ratios) + 1
+    
+    PAC = np.zeros(length) #"positive" above cutoff
+    PBC = np.zeros(length) #"positive" below cutoff
+    NAC = np.zeros(length) #"negative" above cutoff
+    NBC = np.zeros(length) #"negative" below cutoff
+    
+    
+    for n in range(length):
+        above_cutoff = ratios[n:]
+        below_cutoff = ratios[:n]
+        
+        PAC[n] = hypo1_counts[above_cutoff].sum() #gets the indices listed
+        PBC[n] = hypo1_counts[below_cutoff].sum()
+        
+        NAC[n] = hypo2_counts[above_cutoff].sum()
+        NBC[n] = hypo2_counts[below_cutoff].sum()
+        
+        # for bin_index in above_cutoff: #The above lines are the same as this commented code but vectorized
+        #     PAC += g1_phi_counts[bin_index]
+        #     NAC += g4_phi_counts[bin_index]
+        
+        # for bin_index in below_cutoff:
+        #     PBC += g1_phi_counts[bin_index]
+        #     NBC += g4_phi_counts[bin_index]
+        # TPR.append(1 - PAC/(PAC + PBC))
+        # FPR.append(1 - NAC/(NAC + NBC))
+        
+        
+    TPR = PAC/(PAC + PBC) #vectorized calculation
+    FPR = NAC/(NAC + NBC)
+    
+    TPR[~np.isfinite(TPR)] = 0
+    FPR[~np.isfinite(FPR)] = 0
+    
+    return TPR, FPR, np.abs(np.trapz(FPR, TPR))

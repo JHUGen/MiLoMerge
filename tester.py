@@ -1,5 +1,3 @@
-import brunelle_merger.brunelle_merger as bm
-import brunelle_merger.SUPER_ROC_Curves as ROC
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as sp
@@ -8,9 +6,13 @@ import pickle
 import uproot
 import time
 import warnings
+import sys
 import os
 warnings.filterwarnings("ignore")
+sys.path.append('brunelle_merger/')
 
+import brunelle_merger as bm
+import SUPER_ROC_Curves as ROC
 import multidimensionaldiscriminant.optimizeroc as optimizeroc #clone an instance of multidimensional roc in your area
 
 def earth_mover(counts_1, counts_2):
@@ -221,19 +223,20 @@ def run_test(stats_check, bins_wanted, subtraction_metric):
         
         # print("grim counts:", grim_counts[i], grim_counts[i].shape)
         # print("grim bins:", grim_bins[i])
-        TPR, FPR, score = ROC.positive_ROC(grim_counts[i][0], grim_counts[i][1])
+                
+        TPR, FPR, score = ROC.ROC_curve(grim_counts[i][0], grim_counts[i][1])
         ax[7].plot(TPR, FPR, label="GRIM METRIC")
         ax[2].hist([sm_data[key], ps_data[key]], grim_bins[i], label=[r'$0^+$', r'$0^-$'], histtype='step', lw=3)
         ax[2].set_title("{:.3f}".format(score) + ": GRIM METRIC")
     #     plt.plot(TPR, FPR, label="{:.3f}".format(score) + ": GRIM METRIC", lw=3)
         
-        TPR, FPR, score = ROC.positive_ROC(heshy_counts[i][0], heshy_counts[i][1])
+        TPR, FPR, score = ROC.ROC_curve(heshy_counts[i][0], heshy_counts[i][1])
         ax[7].plot(TPR, FPR, label="HESHY ALGO")
         hep.histplot([heshy_counts[i][0], heshy_counts[i][1]], heshy_bins[i], label=[r'$0^+$', r'$0^-$'], histtype='step', lw=3, ax=ax[3])
         # ax[3].hist([sm_data[key], ps_data[key]], heshy_bins[i], label=[r'$0^+$', r'$0^-$'], histtype='step', lw=3)
         ax[3].set_title("{:.3f}".format(score) + ": HESHY ALGO")
         
-        TPR, FPR, score = ROC.positive_ROC(*nonlocal_counts[i])
+        TPR, FPR, score = ROC.ROC_curve(*nonlocal_counts[i])
         ax[7].plot(TPR, FPR, label="NONLOCAL ALGO")
         hep.histplot([nonlocal_counts[i][0], nonlocal_counts[i][1]], nonlocal_bins[i], label=[r'$0^+$', r'$0^-$'], histtype='step', lw=3, ax=ax[4])
         ax[4].set_title("{:.3f}".format(score) + ": NONLOCAL ALGO")
@@ -243,13 +246,13 @@ def run_test(stats_check, bins_wanted, subtraction_metric):
         # ax[5].hist([sm_data[key], ps_data[key]], grim_bins_fast[i], label=[r'$0^+$', r'$0^-$'], histtype='step', lw=3)
         # ax[5].set_title("{:.3f}".format(score) + ": FAST GRIM METRIC")
         
-        TPR, FPR, score = ROC.positive_ROC(OG_counts[i][0], OG_counts[i][1])
+        TPR, FPR, score = ROC.ROC_curve(OG_counts[i][0], OG_counts[i][1])
         ax[7].plot(TPR, FPR, label="UNMERGED")
         hep.histplot([OG_counts[i][0], OG_counts[i][1]], OG_edges[i], label=[r'$0^+$', r'$0^-$'], histtype='step', lw=3, ax=ax[1])
         # ax[1].hist([sm_data[key], ps_data[key]], OG_edges[i], label=[r'$0^+$', r'$0^-$'], histtype='step', lw=3)
         ax[1].set_title("{:.3f}".format(score) + ": UNMERGED")
         
-        TPR, FPR, score = ROC.positive_ROC(post_merge_counts[i][0], post_merge_counts[i][1])
+        TPR, FPR, score = ROC.ROC_curve(post_merge_counts[i][0], post_merge_counts[i][1])
         ax[7].plot(TPR, FPR, label="STATS MERGE")
         hep.histplot([post_merge_counts[i][0], post_merge_counts[i][1]], post_merge_bins[i], label=[r'$0^+$', r'$0^-$'], histtype='step', lw=3, ax=ax[6])
         # ax[6].hist([sm_data[key], ps_data[key]], post_merge_bins[i], label=[r'$0^+$', r'$0^-$'], histtype='step', lw=3)
@@ -306,28 +309,33 @@ if __name__ == "__main__": #TEST DATA!!
     
     
     
-    # for stat_check in [True, False]:
-    #     for subtraction_metric in [True]: #division metric WILL nan out
-    #         for n_bins in [5,7,10]:
-    #             run_test(stat_check, n_bins, subtraction_metric)
-    #             print()
+    for stat_check in [True, False]:
+        for subtraction_metric in [True]: #division metric WILL nan out
+            for n_bins in [5,7,10]:
+                run_test(stat_check, n_bins, subtraction_metric)
+                print()
     
-    nonlocal_bins = [None]*5
-    nonlocal_counts = [None]*5
-    bins_wanted=5
+    # nonlocal_bins = [None]*5
+    # nonlocal_counts = [None]*5
+    # bins_wanted=5
     
-    for i in range(len(branches)):
-        x = counts_sm[i]
-        xp = counts_ps[i]
+    # for i in range(len(branches)):
+    #     # if i == 1: break
+    #     x = counts_sm[i]
+    #     xp = counts_ps[i]
         
-        dim_bins = bm.Grim_Brunelle_nonlocal(edges[i], x.copy(), xp.copy(), stats_check=False, subtraction_metric=True)
-        start3 = time.time()
-        nonlocal_counts[i], temp_bins = dim_bins.run(bins_wanted, track=True)
-        end3 = time.time()
-        tracked_points = dim_bins.tracker
-        nonlocal_bins[i] = temp_bins.copy()
-        print("Nonlocal:", end3 - start3)
+    #     dim_bins = bm.Grim_Brunelle_nonlocal(edges[i], x.copy(), xp.copy(), stats_check=False, subtraction_metric=True)
+    #     start3 = time.time()
+    #     nonlocal_counts[i], temp_bins = dim_bins.run(bins_wanted, track=True)
+    #     end3 = time.time()
+    #     # tracked_points = dim_bins.tracker
+    #     nonlocal_bins[i] = temp_bins.copy()
+    #     print("Nonlocal:", end3 - start3)
         
-        print(tracked_points)
+    #     dim_bins.visualize_changes(xlabel=branches[i], fname="clustering_"+branches[i])
+        
+        # print(tracked_points[-1])
+        # for i in tracked_points[-1]:
+            # print("Bins contained in bin", i , ":", dim_bins.__trace__(i, len(tracked_points) - 1) )
     
     os.system('mv *.png plots/')
