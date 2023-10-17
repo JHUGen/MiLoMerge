@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import mplhep as hep
 import matplotlib as mpl
 import histogram_helpers as h
+import tqdm
 
 # plt.style.use(hep.style.ROOT)
 # mpl.rcParams['axes.labelsize'] = 40
@@ -364,7 +365,6 @@ class Grim_Brunelle_with_standard_model(Grim_Brunelle_merger):
         else:
             return numerator/(2*denomenator)
 
-
 class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
     def __init__(self, bins, *counts, stats_check=True, subtraction_metric=True, weights=None) -> None:
         """This class is the base object for bin merging. 
@@ -453,6 +453,9 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
                 if track:
                     current_iteration_tracker[k] = tuple([n])
                 merged_counts[:,k] = self.counts_to_merge[:,n]
+                self.scores[:,k] = self.scores[:,n]
+                self.scores[k] = self.scores[n]
+                
                 k += 1
         
         if track:
@@ -460,6 +463,11 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         self.things_to_recalculate = tuple([k])
         
         merged_counts[:,k] = self.counts_to_merge[:,i] + self.counts_to_merge[:,j] #shove everything into the final bin
+        
+        for wipe in range(k, len(self.scores)):
+            self.scores[wipe] = np.inf
+            self.scores[:,wipe] = np.inf
+            
         self.n_items -= 1
         
         self.counts_to_merge = merged_counts
@@ -484,14 +492,20 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         # print("USING INDICES:", indices, "With BRUTE_FORCE=", brute_force)
         smallest_distance = (np.inf, None, None)
         for i in range(self.n_items):
-            for j in range(i):
-                
+            for j in self.things_to_recalculate:
                 if i == j:
-                    self.scores[i][j] == np.inf
+                    self.scores[i][j] = np.inf
+                    # print("setting??", self.scores[i][j])
+                    continue
                 
-                temp_dist = self.__MLM__(i, j)
-                if temp_dist < smallest_distance[0]:
-                    smallest_distance = (temp_dist, i, j)
+                self.scores[i][j] = self.__MLM__(i, j)
+                # if temp_dist < smallest_distance[0]:
+                    # smallest_distance = (temp_dist, i, j)
+        smallest_distance_index = np.unravel_index(self.scores.argmin(), self.scores.shape)
+        smallest_distance = self.scores[smallest_distance_index], *smallest_distance_index
+        
+        # print("DIST:", smallest_distance)
+        # print(self.scores)
         
         if not np.isfinite(smallest_distance[0]):
             raise ValueError("Distance function has produced nan/inf at some point with value" + str(smallest_distance[0]))
@@ -515,9 +529,13 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         """
         
         # print("RUNNING NONLOCAL", self.n_items, target_bin_number)
+        # print("n items:", self.n_items)
+        pbar = tqdm.tqdm(total=self.n_items - target_bin_number)    
         while self.n_items > target_bin_number:
             distance, i, j = self.__closest_pair__()
             self.__merge__(i,j, track)
+            pbar.update(1)
+            # print()
     
         return self.counts_to_merge, np.array(range(self.n_items+1))
     
@@ -528,13 +546,15 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         plt.close('all')
         centers = (self.post_stats_merge_bins[1:] + self.post_stats_merge_bins[:-1])/2
         
+        mapping = {}
         color_wheel = iter(plt.cm.rainbow(np.linspace(0, 1, self.n_items)))
         for bin_index in self.tracker[-1].keys():
             indices = self.__trace__(bin_index, len(self.tracker) - 1)
+            mapping[bin_index] = indices
             c = next(color_wheel)
             for index in indices:
                 plt.scatter(centers[index], self.merged_counts[0][index], color=c, marker='o', s=50)
-                plt.scatter(centers[index], self.merged_counts[1][index], color=c, marker='P', s=50)
+                plt.scatter(centers[index], self.merged_counts[1][index], color=c, marker='X', s=50)
         
         if xlabel == None:
             "Distribution Clustering"
@@ -545,7 +565,9 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         plt.tight_layout()
         if fname:
             plt.savefig(fname + '.png')
-        plt.show()
+            plt.show()
+        plt.close()
+        return mapping
     
 class Grim_Brunelle_nonlocal_with_standard_model(Grim_Brunelle_nonlocal):
     def __init__(self, bins, *counts, stats_check=True, subtraction_metric=True, weights=None) -> None:

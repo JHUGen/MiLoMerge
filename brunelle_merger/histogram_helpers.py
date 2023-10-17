@@ -112,3 +112,78 @@ def merge_bins(target, bins, *counts, **kwargs):
         # print()
     return np.vstack(new_counts), np.array(new_bins)
 
+
+class ND_histogram(object):
+    def __init__(self, counts, bins) -> None:
+        self.rolled_counts = counts.copy()
+        self.rolled_bins = bins.copy()
+        self.centers = np.zeros((len(bins), counts.shape[1]))
+        self.diff = np.zeros(len(bins))
+        for n, edges_set in enumerate(bins):
+            centers = (edges_set[1:] + edges_set[:-1])/2
+            self.centers[n] = centers
+            self.diff[n] = np.diff(edges_set)[0]
+
+        
+        self.counts_dim = counts.shape
+        
+        self.unrolled_to_rolled_converter = {}
+        
+        self.unrolled_counts = None
+        self.unrolled_bins = None
+    
+    def unroll(self, bkg=False):
+        counts = self.rolled_counts.copy()
+        integral = np.sum(counts)
+        super_bin_count = 1
+        for b in self.rolled_bins:
+            super_bin_count *= len(b) - 1
+        
+        filler = integral/(10*super_bin_count)
+        one_D_counts = np.zeros(super_bin_count)
+        # print("size of output:", len(one_D_counts))
+        _, bins = np.histogram([], super_bin_count, [0, super_bin_count])
+        
+        indk = 0
+        for index, bin_count in np.ndenumerate(counts):
+            fillable_value = bin_count
+            if bin_count <= 0 and bkg:
+                fillable_value = filler
+            elif bin_count < 0 and not bkg:
+                fillable_value = 0
+            
+            one_D_counts[indk] = fillable_value
+            self.unrolled_to_rolled_converter[indk] = index
+            indk += 1
+        
+        self.unrolled_counts = one_D_counts.copy()
+        self.unrolled_bins = bins.copy()
+        
+        return one_D_counts, bins
+    
+
+
+
+def Unroll_ND_histogram(counts, *bins, bkg=False):
+    counts = np.array(counts)
+    integral = np.sum(counts)
+    super_bin_count = 1
+    for b in bins:
+        super_bin_count *= len(b)
+    
+    filler = integral/(10*super_bin_count)
+    one_D_counts = np.zeros(super_bin_count)
+    _, bins = np.histogram([], super_bin_count, [0, super_bin_count])
+    
+    indk = 0
+    for index, bin_count in np.ndenumerate(counts):
+        fillable_value = bin_count
+        if bin_count <= 0 and bkg:
+            fillable_value = filler
+        elif bin_count < 0 and not bkg:
+            fillable_value = 0
+        
+        one_D_counts[indk] = fillable_value
+        indk += 1
+    
+    return one_D_counts, bins
