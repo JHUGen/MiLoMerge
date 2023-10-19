@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches
 import scipy.stats as sp
 import mplhep as hep
+import itertools
 import pickle
 import uproot
 import time
@@ -306,76 +307,80 @@ if __name__ == "__main__": #TEST DATA!!
         [-1,1]
     ]
     
-    for n, i in enumerate(branches):
-        counts_sm[n], edges[n] = np.histogram(sm_data[i], 100, range=ranges[n], density=True)
-        counts_ps[n], _ = np.histogram(ps_data[i], edges[n], density=True)
-    
-    
-    Z1Z2_counts_sm, *Z1Z2_edges = np.histogram2d(sm_data['Z1Mass'], sm_data['Z2Mass'], 10)
-    Z1Z2_counts_ps, *_ = np.histogram2d(ps_data['Z1Mass'], ps_data['Z2Mass'], Z1Z2_edges)
-    sm_unroll = h.ND_histogram(Z1Z2_counts_sm.copy(), Z1Z2_edges.copy())
-    sm_unroll.unroll()
-    
-    ps_unroll = h.ND_histogram(Z1Z2_counts_ps.copy(), Z1Z2_edges.copy())
-    ps_unroll.unroll()
-    dim_bins = bm.Grim_Brunelle_nonlocal(sm_unroll.unrolled_bins, sm_unroll.unrolled_counts, ps_unroll.unrolled_counts, stats_check=False, subtraction_metric=True)
-    dim_bins.run(10, track=True)
-    mapping = dim_bins.visualize_changes()
-    # print(mapping)
-    # print(sm_unroll.unrolled_to_rolled_converter)
-    
     mosaic = [
         [0,0,'.','.','.'],
         [1,1,3,3,2],
         [1,1,3,3,2]
     ]
     
-    fig, ax = plt.subplot_mosaic(mosaic, constrained_layout=True, gridspec_kw={'wspace':0, 'hspace':0})
-    hep.hist2dplot(Z1Z2_counts_sm, Z1Z2_edges[0], Z1Z2_edges[1], lw=2, ax=ax[1], cbar=False, cmap='Greys', norm=colors.SymLogNorm(linthresh=0.01, linscale=0.01, vmin=Z1Z2_counts_sm.min(), vmax=Z1Z2_counts_sm.max()))
-    hep.hist2dplot(Z1Z2_counts_ps, Z1Z2_edges[0], Z1Z2_edges[1], lw=2, ax=ax[3], cbar=False, cmap='Greys', norm=colors.SymLogNorm(linthresh=0.01, linscale=0.01, vmin=Z1Z2_counts_ps.min(), vmax=Z1Z2_counts_ps.max()))
-    hep.histplot([counts_sm[0], counts_ps[0]], edges[0], lw=2, ax=ax[0])
-    hep.histplot([counts_sm[1], counts_ps[1]], edges[1], lw=2, ax=ax[2], orientation='horizontal')
-    ax[1].set_xlabel(r'$M_{Z_1}$', fontsize=40)
-    ax[1].set_ylabel(r'$M_{Z_2}$', fontsize=40)
-    ax[0].set_xticks([])
-    ax[2].set_yticks([])
-    fig.tight_layout()
-    plt.show()
+    for n, i in enumerate(branches):
+        counts_sm[n], edges[n] = np.histogram(sm_data[i], 100, range=ranges[n], density=True)
+        counts_ps[n], _ = np.histogram(ps_data[i], edges[n], density=True)
     
-    plt.close('all')
-    fig, ax = plt.subplot_mosaic(mosaic, constrained_layout=True, gridspec_kw={'wspace':0, 'hspace':0})
-    
-    Z1_centers, Z2_centers = sm_unroll.centers
-    color_wheel = iter(plt.cm.rainbow(np.linspace(0, 1, 10)))
-    for indices in mapping:
-        c = next(color_wheel)
-        for index in mapping[indices]:
-            x, y = sm_unroll.unrolled_to_rolled_converter[index]
-            # print(*(Z1_centers[x] - sm_unroll.diff[0], Z2_centers[y] - sm_unroll.diff[1]))
-            
-            rect = matplotlib.patches.Rectangle(
-                (Z1_centers[x] - sm_unroll.diff[0], Z2_centers[y] - sm_unroll.diff[1]),
-                sm_unroll.diff[0], sm_unroll.diff[1], color=c, zorder=np.inf)
-            
-            ax[0].scatter(Z1_centers[x], dim_bins.merged_counts[0][index], color=c, marker='o', s=50)
-            ax[0].scatter(Z1_centers[x], dim_bins.merged_counts[1][index], color=c, marker='X', s=50)
-            
-            ax[2].scatter(dim_bins.merged_counts[0][index], Z2_centers[y], color=c, marker='o', s=50)
-            ax[2].scatter(dim_bins.merged_counts[1][index], Z2_centers[y], color=c, marker='X', s=50)
-            ax[2].invert_yaxis()
-            
-            ax[1].add_patch(rect)
-            # plt.xlim()
-            
-            ax[1].scatter(Z1_centers[x], Z2_centers[y], color=c, marker='o', s=0)
-            ax[1].scatter(Z1_centers[x], Z2_centers[y], color=c, marker='X', s=0)
-    
-    ax[1].set_xlabel(r'$M_{Z_1}$', fontsize=40)
-    ax[1].set_ylabel(r'$M_{Z_2}$', fontsize=40)
-    ax[0].set_xticks([])
-    ax[2].set_yticks([])
-    fig.tight_layout()
-    plt.show()
+    for comb in itertools.combinations(branches, 2):
+        q1, q2 = comb
+        Z1Z2_counts_sm, *Z1Z2_edges = np.histogram2d(sm_data[q1], sm_data[q2], 20)
+        Z1Z2_counts_ps, *_ = np.histogram2d(ps_data[q1], ps_data[q2], Z1Z2_edges)
+        sm_unroll = h.ND_histogram(Z1Z2_counts_sm.copy(), Z1Z2_edges.copy())
+        sm_unroll.unroll()
+        
+        ps_unroll = h.ND_histogram(Z1Z2_counts_ps.copy(), Z1Z2_edges.copy())
+        ps_unroll.unroll()
+        dim_bins = bm.Grim_Brunelle_nonlocal(sm_unroll.unrolled_bins, sm_unroll.unrolled_counts, ps_unroll.unrolled_counts, stats_check=False, subtraction_metric=True)
+        dim_bins.run(10, track=True)
+        mapping = dim_bins.visualize_changes()
+        # print(mapping)
+        # print(sm_unroll.unrolled_to_rolled_converter)
+        
+        fig, ax = plt.subplot_mosaic(mosaic, constrained_layout=True, gridspec_kw={'wspace':0, 'hspace':0})
+        hep.hist2dplot(Z1Z2_counts_sm, Z1Z2_edges[0], Z1Z2_edges[1], lw=2, ax=ax[1], cbar=False, cmap='Greys', norm=colors.SymLogNorm(linthresh=0.01, linscale=0.01, vmin=Z1Z2_counts_sm.min(), vmax=Z1Z2_counts_sm.max()))
+        hep.hist2dplot(Z1Z2_counts_ps, Z1Z2_edges[0], Z1Z2_edges[1], lw=2, ax=ax[3], cbar=False, cmap='Greys', norm=colors.SymLogNorm(linthresh=0.01, linscale=0.01, vmin=Z1Z2_counts_ps.min(), vmax=Z1Z2_counts_ps.max()))
+        hep.histplot([np.sum(Z1Z2_counts_sm, axis=1), np.sum(Z1Z2_counts_ps, axis=1)], Z1Z2_edges[0], lw=2, ax=ax[0])
+        hep.histplot([np.sum(Z1Z2_counts_sm, axis=0), np.sum(Z1Z2_counts_ps, axis=0)], Z1Z2_edges[1], lw=2, ax=ax[2], orientation='horizontal')
+        ax[1].set_xlabel(r'$M_{Z_1}$', fontsize=40)
+        ax[1].set_ylabel(r'$M_{Z_2}$', fontsize=40)
+        ax[0].set_xticks([])
+        ax[2].set_yticks([])
+        ax[3].set_yticks([])
+        fig.tight_layout()
+        fig.savefig(q1+"_"+q2+"_distr")
+        
+        plt.close('all')
+        fig, ax = plt.subplot_mosaic(mosaic, constrained_layout=True, gridspec_kw={'wspace':0, 'hspace':0})
+        
+        Z1_centers, Z2_centers = sm_unroll.centers
+        color_wheel = iter(plt.cm.gist_ncar(np.linspace(0, 1, 10)))
+        for indices in mapping:
+            c = next(color_wheel)
+            for index in mapping[indices]:
+                x, y = sm_unroll.unrolled_to_rolled_converter[index]
+                # print(*(Z1_centers[x] - sm_unroll.diff[0], Z2_centers[y] - sm_unroll.diff[1]))
+                
+                rect = matplotlib.patches.Rectangle(
+                    (Z1_centers[x] - sm_unroll.diff[0], Z2_centers[y] - sm_unroll.diff[1]),
+                    sm_unroll.diff[0], sm_unroll.diff[1], color=c, zorder=np.inf)
+                
+                ax[0].scatter(Z1_centers[x], dim_bins.merged_counts[0][index], color=c, marker='o', s=50)
+                ax[0].scatter(Z1_centers[x], dim_bins.merged_counts[1][index], color=c, marker='X', s=50)
+                
+                ax[2].scatter(dim_bins.merged_counts[0][index], Z2_centers[y], color=c, marker='o', s=50)
+                ax[2].scatter(dim_bins.merged_counts[1][index], Z2_centers[y], color=c, marker='X', s=50)
+                ax[2].invert_yaxis()
+                
+                ax[1].add_patch(rect)
+                # plt.xlim()
+                
+                ax[1].scatter(Z1_centers[x], Z2_centers[y], color=c, marker='o', s=0)
+                ax[1].scatter(Z1_centers[x], Z2_centers[y], color=c, marker='X', s=0)
+        
+        ax[1].set_xlabel(r'$M_{Z_1}$', fontsize=40)
+        ax[1].set_ylabel(r'$M_{Z_2}$', fontsize=40)
+        ax[0].set_xticks([])
+        ax[2].set_yticks([])
+        fig.tight_layout()
+        fig.savefig(q1+"_"+q2+"_distr_merging")
+        
+        plt.close('all')
     
     # for stat_check in [True, False]:
     #     for subtraction_metric in [True]: #division metric WILL nan out

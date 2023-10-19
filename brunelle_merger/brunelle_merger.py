@@ -4,6 +4,7 @@ import mplhep as hep
 import matplotlib as mpl
 import histogram_helpers as h
 import tqdm
+import jit_methods as j
 
 # plt.style.use(hep.style.ROOT)
 # mpl.rcParams['axes.labelsize'] = 40
@@ -115,34 +116,7 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
         float
             The distance metric between the two indices
         """
-        
-        counts = self.counts_to_merge.copy()
-        numerator = 0
-        denomenator = 0
-        
-        for h in range(self.n):
-            for hP in range(h+1, self.n):
-                mat = np.array([
-                    [ counts[h][b], counts[h][bP] ],
-                    [ counts[hP][b], counts[hP][bP] ]
-                ], dtype=float)
-                
-                mat *= self.weights[h][hP]
-                # print("tests")
-                # print(mat)
-                # print(counts[h][b], counts[h][bP], counts[hP][b], counts[hP][bP])
-                # print(2*np.prod(mat), 2*np.prod([counts[h][b], counts[h][bP], counts[hP][b], counts[hP][bP]]))
-                # print()
-                if self.subtraction_metric:
-                    numerator += (mat[0][0]*mat[1][1])**2 + (mat[0][1]*mat[1][0])**2 - 2*np.prod(mat)
-                else:
-                    numerator += (mat[0][0]*mat[1][1])**2 + (mat[0][1]*mat[1][0])**2
-                    denomenator += np.prod(mat)
-                    
-        if self.subtraction_metric:
-            return numerator#/(2*denomenator)
-        else:
-            return numerator/(2*denomenator)
+        return j._MLM(self.n, self.counts_to_merge.copy(), self.weights.copy(), b, bP, self.subtraction_metric, False)
     
     def __merge__(self, i, j):
         """Merges bins together by bin count index
@@ -317,9 +291,6 @@ class Grim_Brunelle_with_standard_model(Grim_Brunelle_merger):
             If len(weights) != len(counts) then raise an error
         """
         super().__init__(bins, *counts, stats_check=stats_check, subtraction_metric=subtraction_metric, weights=weights)
-        
-        self.weights = np.array(weights)
-        
         
     def __MLM__(self, b, bP):
         """The distance function MLM - edited to perform only comparisons with the "Standard Model" sample.
