@@ -100,49 +100,10 @@
 </dl>
 </dd></dl>
 
-<dl class="py class">
-<dt class="sig sig-object py" id="SUPER_ROC_Curves.SUPER_ROC_Curves">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">SUPER_ROC_Curves.</span></span><span class="sig-name descname"><span class="pre">SUPER_ROC_Curves</span></span><a class="reference internal" href="_modules/SUPER_ROC_Curves.html#SUPER_ROC_Curves"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SUPER_ROC_Curves.SUPER_ROC_Curves" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
-<p>A nice collection of ROC curves</p>
-<dl class="field-list simple">
-</dl>
-<dl class="py method">
-<dt class="sig sig-object py" id="SUPER_ROC_Curves.SUPER_ROC_Curves.add_ROC">
-<span class="sig-name descname"><span class="pre">add_ROC</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SUPER_ROC_Curves.html#SUPER_ROC_Curves.add_ROC"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SUPER_ROC_Curves.SUPER_ROC_Curves.add_ROC" title="Permalink to this definition"></a></dt>
-<dd><p>Generates ROC curves based off of the samples you give it and an optional name.
-Will return the requisite values, but will also store them in self.curves</p>
-<p><strong>&gt;= 1 sample must be *completely* positive</strong></p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>sample1</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.26)"><em>numpy.ndarray</em></a>) – This is an array of histogram bin counts</p></li>
-<li><p><strong>sample2</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.26)"><em>numpy.ndarray</em></a>) – This is an array of histogram bin counts</p></li>
-<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><em>str</em></a><em>, </em><em>optional</em>) – The name you want to give you sample. If none - the name will be an assigned number, by default None</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A tuple of the Sample 1 axis, Sample 2 axis, and the “score” between these 2 samples</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Tuple(<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.26)">numpy.ndarray</a>, <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.26)">numpy.ndarray</a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)">float</a>)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="SUPER_ROC_Curves.SUPER_ROC_Curves.plot_ROCs">
-<span class="sig-name descname"><span class="pre">plot_ROCs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/SUPER_ROC_Curves.html#SUPER_ROC_Curves.plot_ROCs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SUPER_ROC_Curves.SUPER_ROC_Curves.plot_ROCs" title="Permalink to this definition"></a></dt>
-<dd><p>Plots every ROC Curve on a single plot</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="SUPER_ROC_Curves.SUPER_ROC_Curves.plot_scores">
-<span class="sig-name descname"><span class="pre">plot_scores</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/SUPER_ROC_Curves.html#SUPER_ROC_Curves.plot_scores"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SUPER_ROC_Curves.SUPER_ROC_Curves.plot_scores" title="Permalink to this definition"></a></dt>
-<dd><p>Plots the scores</p>
-</dd></dl>
-
-</dd></dl>
+<dl class="py function">
+<dt class="sig sig-object py" id="SUPER_ROC_Curves.length_scale_ROC">
+<span class="sig-prename descclassname"><span class="pre">SUPER_ROC_Curves.</span></span><span class="sig-name descname"><span class="pre">length_scale_ROC</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SUPER_ROC_Curves.html#length_scale_ROC"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SUPER_ROC_Curves.length_scale_ROC" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
 
 </section>
 
