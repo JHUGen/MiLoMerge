@@ -15,7 +15,6 @@ sys.path.append('../../brunelle_merger/')
 
 import brunelle_merger as bm
 import SUPER_ROC_Curves as ROC
-import histogram_helpers as h
 
 def run_test(stats_check, bins_wanted, subtraction_metric):
     OG_edges = edges.copy()
