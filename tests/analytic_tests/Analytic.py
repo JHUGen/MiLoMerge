@@ -1,6 +1,6 @@
 import numpy as np
-import numba as nb
 mapping = np.memmap('Analytic.mm', dtype=np.int32, mode='r', shape=(3125, 3125))
+
 def place_entry(N, observables, verbose=False):
 	"""**place_entry** will place a set of observables into a given bin index from a previous optimization
 
@@ -34,19 +34,20 @@ def place_entry(N, observables, verbose=False):
  [-1.000,-0.600,-0.200,0.200,0.600,1.000],
  [-3.142,-1.885,-0.628,0.628,1.885,3.142]])
 	nonzero_rolled = np.zeros(5, dtype=np.uint8)
-	for i in nb.prange(5):
+	for i in range(5):
 		nonzero_rolled[i] = np.searchsorted(edges[i], observables[i])
 	nonzero_rolled -= 1
 	if verbose:
 		print('original index of:', nonzero_rolled)
 		print('This places your point in the range:')
-		for i in nb.prange(edges.shape[0]):
+		for i in range(edges.shape[0]):
 			print('[', edges[i][nonzero_rolled[i]], ',', edges[i][int(nonzero_rolled[i]+1)], ']')
 	nonzero = (np.power(5, np.arange(4,-1,-1, np.int16))*nonzero_rolled).sum()
 	mapped_val = mapping[N-1][nonzero]
 	if mapped_val < 0:
 		raise ValueError('Cannot have fewer than 0 bins!')
 	return nonzero_rolled, mapped_val
+
 def help():
 	text = """**place_entry** will place a set of observables into a given bin index from a previous optimization
 

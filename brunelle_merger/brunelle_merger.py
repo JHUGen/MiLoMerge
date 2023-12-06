@@ -56,18 +56,15 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
             errortext = [str(len(count)) for count in counts]
             errortext = " ".join(errortext)
             errortext = 'Not all counts have same length! Lengths are: ' + errortext
-            errortext = h.print_msg_box(errortext, title="ERROR")
             raise ValueError('\n'+errortext)
         
         if len(counts[0]) != len(bins) - 1:
             errortext = "Invalid lengths! {:.0f} != {:.0f} - 1".format(len(counts[0]), len(bins))
-            errortext = h.print_msg_box(errortext, title="ERROR")
             raise ValueError('\n'+errortext)
 
         if weights != None and len(weights) != len(counts):
             errortext = "The # of weight values and the # of hypotheses should be the same!"
             errortext += f'\nThere are {len(counts)} hypotheses and {len(weights)} weight values'
-            errortext = h.print_msg_box(errortext)
             raise ValueError('\n'+errortext)
 
         if weights == None:
@@ -385,7 +382,6 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         
         
         code = ["import numpy as np"]
-        code += ["import numba as nb"]
         code += ["mapping = np.memmap('"+fname+ ".mm', dtype=np.int32, mode='r', shape=" + str(self.tracker.shape) + ")"]
         code += ["def place_entry(N, observables, verbose=False):"]
         code = "\n".join(code)
@@ -402,7 +398,7 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         func += ["edges=np.array("+edges_str + ")"]
         if self.n_observables > 1:
             func += ["nonzero_rolled = np.zeros({:.0f}, dtype=np.uint8)".format(self.n_observables)]
-            func += ["for i in nb.prange(5):"]
+            func += ["for i in range(5):"]
             func += ["\tnonzero_rolled[i] = np.searchsorted(edges[i], observables[i])"]
             func += ["nonzero_rolled -= 1"]
         else:
@@ -410,7 +406,7 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         func += ["if verbose:"]
         func += ["\tprint('original index of:', nonzero_rolled)"]
         func += ["\tprint('This places your point in the range:')"]
-        func += ["\tfor i in nb.prange(edges.shape[0]):"]
+        func += ["\tfor i in range(edges.shape[0]):"]
         func += ["\t\tprint('[', edges[i][nonzero_rolled[i]], ',', edges[i][int(nonzero_rolled[i]+1)], ']')"]
         if self.n_observables > 1:
             func += ["nonzero = (np.power({:.0f}, np.arange({:.0f},-1,-1, np.int16))*nonzero_rolled).sum()".format(self.physical_bins.shape[1] - 1, self.n_observables - 1)]
