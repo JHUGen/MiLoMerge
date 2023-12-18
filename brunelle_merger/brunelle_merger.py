@@ -1,12 +1,12 @@
 import warnings
 import sys
+import os
+import time
 import numpy as np
-import matplotlib.pyplot as plt
-import mplhep as hep
-import matplotlib as mpl
 import tqdm
 import numba as nb
-
+import h5py
+import dask.array as da
 # plt.style.use(hep.style.ROOT)
 # mpl.rcParams['axes.labelsize'] = 40
 # mpl.rcParams['xaxis.labellocation'] = 'center'
@@ -14,7 +14,7 @@ import numba as nb
 class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
     #https://engineering.virginia.edu/faculty/nathan-brunelle
     def __init__(self, bins, *counts,
-                 stats_check=True, subtraction_metric=True, weights=None, SM_version=False):
+                 subtraction_metric=True, weights=None, SM_version=False):
         """This class is the base object for bin merging.
         It merges bins locally (by outting adjacent bins together).
         Please only input 1 dimensional histograms!
@@ -59,15 +59,15 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
             raise ValueError('\n'+errortext)
         
         if len(counts[0]) != len(bins) - 1:
-            errortext = "Invalid lengths! {:.0f} != {:.0f} - 1".format(len(counts[0]), len(bins))
+            errortext = f"Invalid lengths! {len(counts[0]):.0f} != {len(bins):.0f} - 1"
             raise ValueError('\n'+errortext)
 
-        if weights != None and len(weights) != len(counts):
+        if weights is not None and len(weights) != len(counts):
             errortext = "The # of weight values and the # of hypotheses should be the same!"
             errortext += f'\nThere are {len(counts)} hypotheses and {len(weights)} weight values'
             raise ValueError('\n'+errortext)
 
-        if weights == None:
+        if weights is None:
             weights = np.ones(len(counts), dtype=float)
         else:
             weights = np.array(weights)
@@ -84,33 +84,23 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
         self.original_counts = self.original_counts.T
         self.original_counts /= np.abs(self.original_counts).sum(axis=0)
         self.original_counts = self.original_counts.T
-        
-        stats_for_mean = np.concatenate(counts)
-        
-        if not stats_check:
-            self.merged_counts, self.post_stats_merge_bins = self.original_counts.copy(), self.original_bins.copy()
-        else:
-            self.merged_counts, self.post_stats_merge_bins = h.merge_bins(0.05*np.mean(stats_for_mean), 
-                                            bins, 
-                                            *self.original_counts.copy()
-                                            )
 
-        self.n_items = len(self.merged_counts[0])
+        self.n_items = len(self.original_counts[0])
         
-        self.local_edges = self.post_stats_merge_bins.copy()
+        self.local_edges = self.original_bins.copy()
         
-        self.counts_to_merge = self.merged_counts.copy()
-        self.counts_to_merge = self.merged_counts.astype(float)
+        self.counts_to_merge = self.original_counts.copy()
+        self.counts_to_merge = self.original_counts.astype(float)
         
         self.SM_version = SM_version
     
-    def reset(self):
-        """Resets the state
-        """
-        self.counts_to_merge = self.merged_counts.copy()
-        self.counts_to_merge = self.merged_counts.astype(float)
-        self.local_edges = self.post_stats_merge_bins.copy()
-        self.n_items = len(self.merged_counts[0])
+    # def reset(self):
+    #     """Resets the state
+    #     """
+    #     self.counts_to_merge = self.merged_counts.copy()
+    #     self.counts_to_merge = self.merged_counts.astype(float)
+    #     self.local_edges = self.post_stats_merge_bins.copy()
+    #     self.n_items = len(self.merged_counts[0])
     
     @staticmethod
     @nb.njit
@@ -164,8 +154,8 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
                     
         if subtraction_metric:
             return numerator
-        else:
-            return numerator/(2*denomenator)
+        
+        return numerator/(2*denomenator)
     
     def __merge__(self, i, j):
         """Merges bins together by bin count index
@@ -226,7 +216,7 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
             msg = "Bins requested >= current number of bins!"
             msg += "\n({:.0f} >= {:.0f})".format(target_bin_number, self.n_items)
             msg += "\nNo merging will occur"
-            warnings.warn("\n"+h.print_msg_box(msg, title="WARNING"))
+            warnings.warn("\n"+msg, title="WARNING")
             
         while self.n_items > target_bin_number:
             combinations = {}
@@ -255,7 +245,7 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
         return self.counts_to_merge, self.local_edges
 
 class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
-    def __init__(self, bins, *counts, stats_check=True, subtraction_metric=True, weights=None, SM_version=False) -> None:
+    def __init__(self, bins, *counts, subtraction_metric=True, weights=None, SM_version=False) -> None:
         """This class is the base object for bin merging. 
         It merges bins nonlocally - so the bins no longer contain any physical meaning afterwards.
         Please only input 1 dimensional histograms! Should you need to operate upon a multidimensional histogram - please unroll them first.
@@ -289,20 +279,51 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         self.physical_bins = bins
         self.n_observables = bins.shape[0] if len(bins.shape) > 1 else 1
         # print(self.n_observables)
-        self.original_counts_shape = counts[0].shape
         
         unrolled = list(map(np.ndarray.ravel, counts))
         bins = np.arange(len(unrolled[0]) + 1)
         
         
-        super().__init__(bins, *unrolled, stats_check=stats_check, subtraction_metric=subtraction_metric, weights=weights, SM_version=SM_version)
-    
-        self.tracker = np.full((self.n_items, self.n_items),np.nan, object)
+        super().__init__(bins, *unrolled, subtraction_metric=subtraction_metric, weights=weights, SM_version=SM_version)
+        self.original_n = self.n_items
+        del self.local_edges #no need for local!
+        
+        self.tracker_file = h5py.File("tracker.hdf5", 'w', libver='latest') #THIS IS VERY SLOW PLEASE REVISE
+        self.tracker = self.tracker_file.create_dataset(
+            "tracker", (self.n_items, self.n_items, self.n_items), np.bool_,
+            compression="gzip", compression_opts=9,
+            fletcher32=True, fillvalue=np.False_,
+            chunks=(1, self.n_items, self.n_items),
+            maxshape=(self.n_items, self.n_items, self.n_items),
+            shuffle=True
+            )
+        # self.tracker_file = tables.open_file("tracker.hdf5", 'w')
+        # self.tracker = self.tracker_file.create_carray(
+        #     self.tracker_file.root, "tracker", tables.BoolAtom(), shape=(self.n_items, self.n_items, self.n_items),
+            
+        #                                                )
+        
+        [self.tracker[self.n_items - 1, i] = np.diag(range(self.n_items))]
         
         for i in range(self.n_items):
-            self.tracker[self.n_items - 1][i] = tuple([i]) #record where it started, and where it ended
+            arr = np.full(self.n_items, np.False_, np.bool_)
+            arr[i] = np.True_
+            self.tracker[self.n_items - 1, i] = arr
+        
+        # if track:
+            # self.tracker = np.empty((self.n_items, self.n_items), object)
+        
+        print("SIZE OLD:", sys.getsizeof(np.empty((self.n_items, self.n_items), object)))
+        print("SIZE NEW:", os.path.getsize("tracker.hdf5"))
+        np.memmap("testing_size.mm", dtype=np.bool_, shape=(self.n_items, self.n_items, self.n_items), mode='w+')
+        print("SIZE MM:", os.path.getsize("testing_size.mm"))
             
-        self.things_to_recalculate = tuple([i for i in range(self.n_items)])
+        #     for i in range(self.n_items):
+        #         self.tracker[self.n_items - 1][i] = tuple([i]) #record where it started, and where it ended
+        # else:
+        #     self.tracker = np.empty((self.n_items, self.n_items), np.bool8)
+            
+        self.things_to_recalculate = tuple(range(self.n_items))
         
         self.scores = np.zeros((self.n_items, self.n_items))
     
@@ -319,16 +340,33 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         
         if not fname:
             fname = "dumped"
-            
-        bin_map = np.memmap(fname+".mm", dtype=np.int32, shape=self.tracker.shape, mode='w+')
-        bin_map[:] = -1
-        for n_bins, set_of_bins in enumerate(self.tracker):
-            for new_bin, bin_tuple in enumerate(set_of_bins):
-                if not isinstance(bin_tuple, tuple):
-                    continue
-                for index in bin_tuple:
-                    bin_map[n_bins][index] = new_bin
         
+        f = h5py.File("tracker.hdf5", 'r')
+        tracker_h5 = f['tracker']
+        tracker = da.from_array(tracker_h5, (1, self.original_n, self.original_n))
+        
+        
+        bin_map = np.memmap(fname+".mm", dtype=np.int32, shape=(self.original_n, self.original_n), mode='w+')
+        bin_map[:] = -1
+        
+        for n_iter in range(self.original_n):
+            new_indices, old_indices = tracker[n_iter].compute().nonzero()
+            # print(indices)
+            for new_index, old_index in zip(new_indices, old_indices):
+                bin_map[n_iter][old_index] = new_index
+            # for new_bin_index, old_indices in enumerate(indices):
+            #     for old_index in old_indices:
+            #         bin_map[n_iter][old_index] = new_bin_index
+                # for old_index, boolean in enumerate(boolean_array):
+                    # if boolean:
+                        # if n_bins == self.original_n - 1:
+                        # print(f"{index}->{new_bin}")
+                        # bin_map[n_iter][old_index] = new_bin_index
+                        # if binning_check[index]:
+                            # print("DUPLICATED BIN OF", new_bin)
+                        
+            
+        f.close()
         np.set_printoptions(threshold=sys.maxsize)
         edges_str = np.array2string(self.physical_bins, separator=',', formatter={'float_kind':lambda x: "%.3f" % x}, max_line_width=np.inf)
         
@@ -382,7 +420,7 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         
         
         code = ["import numpy as np"]
-        code += ["mapping = np.memmap('"+fname+ ".mm', dtype=np.int32, mode='r', shape=" + str(self.tracker.shape) + ")"]
+        code += ["mapping = np.memmap('"+fname+ ".mm', dtype=np.int32, mode='r', shape=" + str((self.original_n, self.original_n)) + ")"]
         code += ["def place_entry(N, observables, verbose=False):"]
         code = "\n".join(code)
         
@@ -451,17 +489,27 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         merged_counts = np.zeros(shape=(self.n, self.n_items - 1), dtype=float)
         k = 0
         
+        current_iteration = self.tracker[self.n_items - 1]
+        newest_iteration = self.tracker[self.n_items - 2]
+        
         for n in range(self.n_items):
             if n != i and n != j:
-                self.tracker[self.n_items - 2][k] = self.tracker[self.n_items - 1][n]
+                # self.tracker[self.n_items - 2][k] = self.tracker[self.n_items - 1][n]
+                # self.tracker[self.n_items-2, k] = self.tracker[self.n_items - 1, n]
+                newest_iteration[k] = current_iteration[n]
+                
                 merged_counts[:,k] = self.counts_to_merge[:,n]
                 self.scores[:,k] = self.scores[:,n]
                 self.scores[k] = self.scores[n]
                 
                 k += 1
         
-        self.tracker[self.n_items - 2][k] = self.tracker[self.n_items - 1][i] + self.tracker[self.n_items - 1][j]
-        self.things_to_recalculate = tuple([k])
+        # self.tracker[self.n_items - 2][k] = self.tracker[self.n_items - 1][i] + self.tracker[self.n_items - 1][j]
+        # np.logical_or(self.tracker[self.n_items - 1, i], self.tracker[self.n_items - 1, j], out=self.tracker[self.n_items - 2, k])
+        # self.tracker[self.n_items - 2, k] = np.logical_or(self.tracker[self.n_items - 1, i], self.tracker[self.n_items - 1, j])
+        newest_iteration[k] = np.logical_or(current_iteration[i], current_iteration[j])
+        
+        self.things_to_recalculate = (k,)
         
         merged_counts[:,k] = self.counts_to_merge[:,i] + self.counts_to_merge[:,j] #shove everything into the final bin
         
@@ -472,10 +520,12 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         self.scores[:,k:] = np.inf
             
         self.n_items -= 1
-        
+        # self.tracker[self.n_items - 1] = newest_iteration
         self.counts_to_merge = merged_counts
         
-        # self.tracker[self.n_items - 1] = current_iteration_tracker
+        self.tracker[self.n_items - 1] = newest_iteration
+        # print("new tracker is:", self.tracker[self.n_items - 1, k])
+        # print("should be:", newest_iteration[k])
         
         return self.counts_to_merge
 
@@ -531,47 +581,49 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
             
         pbar = tqdm.tqdm(total=self.n_items - target_bin_number)
         while self.n_items > target_bin_number:
+            start = time.time()
             distance, i, j = self.__closest_pair__()
+            dist_time = time.time()
+            print("MLM TIME:", dist_time - start)
             self.__merge__(i,j)
+            merge_time = time.time()
+            print("MERGE TIME:", merge_time - dist_time)
             pbar.update(1)
-            # print()
+        print()
+        self.tracker_file.close()
     
         return self.counts_to_merge, np.array(range(self.n_items+1))
     
-    def visualize_changes(self, n=None, xlabel=None, fname=""):
-        if len(self.tracker) == 1:
-            errortext = "Need to have used the run command with track=True to visualize this!"
-            raise RuntimeError('\n' + h.print_msg_box(errortext, title="ERROR"))
-        
-        plt.close('all')
-        with plt.style.context(hep.style.CMS):
-            plt.figure(figsize=(10,7), facecolor='white')
-            centers = (self.post_stats_merge_bins[1:] + self.post_stats_merge_bins[:-1])/2
+    # def visualize_changes(self, n=None, xlabel=None, fname=""):
+    #     plt.close('all')
+    #     with plt.style.context(hep.style.CMS):
+    #         plt.figure(figsize=(10,7), facecolor='white')
+    #         centers = (self.post_stats_merge_bins[1:] + self.post_stats_merge_bins[:-1])/2
             
-            if n == None:
-                n = self.n_items
+    #         if n == None:
+    #             n = self.n_items
             
-            color_wheel = iter(plt.cm.rainbow(np.linspace(0, 1, n)))
-            for bin_row in self.tracker[n - 1]:
-                # indices = self.__trace__(bin_index, len(self.tracker) - 1)
-                if not isinstance(bin_row, tuple) and np.isnan(bin_row):
-                    continue
-                indices = bin_row
-                c = next(color_wheel)
-                for index in indices:
-                    plt.scatter(centers[index], self.merged_counts[0][index], color=c, marker='.', s=25)
-                    plt.scatter(centers[index], self.merged_counts[1][index], color=c, marker='x', s=25)
-                    # plt.scatter(centers[index], self.merged_counts[2][index], color=c, marker='1', s=25)
+    #         color_wheel = iter(plt.cm.rainbow(np.linspace(0, 1, n)))
+    #         for bin_row in self.tracker[n - 1]:
+    #             # indices = self.__trace__(bin_index, len(self.tracker) - 1)
+    #             if not isinstance(bin_row, tuple) and np.isnan(bin_row):
+    #                 continue
+    #             indices = bin_row
+    #             c = next(color_wheel)
+    #             for index in indices:
+    #                 plt.scatter(centers[index], self.merged_counts[0][index], color=c, marker='.', s=25)
+    #                 plt.scatter(centers[index], self.merged_counts[1][index], color=c, marker='x', s=25)
+    #                 # plt.scatter(centers[index], self.merged_counts[2][index], color=c, marker='1', s=25)
             
-            if xlabel == None:
-                "Distribution Clustering"
-            else:
-                xlabel = "Nonlocal clustering for " + xlabel
-            plt.title("Merging Non-locally to {:.0f} bins from {:.0f} bins".format(n, len(self.merged_counts[0])))
-            plt.xlabel(xlabel)
-            plt.tight_layout()
-            if fname:
-                plt.savefig(fname + '.png')
-                # plt.show()
-            plt.close()
-            return self.tracker
+    #         if xlabel == None:
+    #             "Distribution Clustering"
+    #         else:
+    #             xlabel = "Nonlocal clustering for " + xlabel
+    #         plt.title("Merging Non-locally to {:.0f} bins from {:.0f} bins".format(n, len(self.merged_counts[0])))
+    #         plt.xlabel(xlabel)
+    #         plt.tight_layout()
+    #         if fname:
+    #             plt.savefig(fname + '.png')
+    #             # plt.show()
+    #         plt.close()
+    #         return self.tracker

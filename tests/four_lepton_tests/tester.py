@@ -203,7 +203,7 @@ if __name__ == "__main__": #TEST DATA!!
     ]
     
     for n, i in enumerate(branches):
-        counts_sm[n], edges[n] = np.histogram(sm_data[i], 100, range=ranges[n], density=True)
+        counts_sm[n], edges[n] = np.histogram(sm_data[i], 1000, range=ranges[n], density=True)
         counts_ps[n], _ = np.histogram(ps_data[i], edges[n], density=True)
     
     ## 2D combinations
@@ -285,12 +285,12 @@ if __name__ == "__main__": #TEST DATA!!
     nonlocal_counts = [None]*5
     bins_wanted=5
     
-    for i in range(len(branches)):
+    for i, branch in enumerate(branches):
         # if i == 1: break
         x = counts_sm[i]
         xp = counts_ps[i]
         
-        dim_bins = bm.Grim_Brunelle_nonlocal(edges[i], x.copy(), xp.copy(), stats_check=False, subtraction_metric=True, SM_version=True)
+        dim_bins = bm.Grim_Brunelle_nonlocal(edges[i], x.copy(), xp.copy(), subtraction_metric=True, SM_version=True)
         start3 = time.time()
         nonlocal_counts[i], temp_bins = dim_bins.run()
         end3 = time.time()
@@ -298,8 +298,9 @@ if __name__ == "__main__": #TEST DATA!!
         nonlocal_bins[i] = temp_bins.copy()
         print("Nonlocal:", end3 - start3)
         
-        dim_bins.visualize_changes(2, xlabel=branches[i], fname="clustering_new_"+branches[i])
+        # dim_bins.visualize_changes(2, xlabel=branches[i], fname="clustering_new_"+branches[i])
+        dump = time.time()
         dim_bins.dump_edges(branches[i])
-        
+        print("DUMP TIME:", time.time() - dump)
     
     os.system('mv *.png ../../plots')

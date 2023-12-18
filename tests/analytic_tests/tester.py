@@ -33,13 +33,14 @@ if __name__ == "__main__": #TEST DATA!!
     data_g1g4 = np.memmap(files[2] + ".mm", mode='r', shape=shape, dtype=np.float64)
     
     # print(data_g1, data_g4, data_g1g4, sep='\n')
-    
-    dim_bins = bm.Grim_Brunelle_nonlocal(edges, data_g1, data_g1g4 - data_g1 - data_g4, stats_check=False, SM_version=True)
+    start = time.time()
+    dim_bins = bm.Grim_Brunelle_nonlocal(edges, data_g1, data_g1g4 - data_g1 - data_g4, SM_version=True)
+    print("INIT TIME:", time.time() - start)
     nonlocal_counts = dim_bins.run()
     dim_bins.dump_edges("Analytic_pairwise_INT")
     # dim_bins.visualize_changes(10, fname="Analytic_pairwise_INT")
     
-    dim_bins = bm.Grim_Brunelle_nonlocal(edges, data_g1, data_g4, data_g1g4 - data_g1 - data_g4, stats_check=False, SM_version=True)
+    dim_bins = bm.Grim_Brunelle_nonlocal(edges, data_g1, data_g4, data_g1g4 - data_g1 - data_g4, SM_version=True)
     nonlocal_counts = dim_bins.run()
     dim_bins.dump_edges("Analytic")
     # dim_bins.visualize_changes(10, fname="Analytic")
