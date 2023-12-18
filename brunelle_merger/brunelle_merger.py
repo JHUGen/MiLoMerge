@@ -303,7 +303,7 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
             
         #                                                )
         
-        [self.tracker[self.n_items - 1, i] = np.diag(range(self.n_items))]
+        self.tracker[self.n_items - 1] = np.bool_(np.eye(self.n_items))
         
         for i in range(self.n_items):
             arr = np.full(self.n_items, np.False_, np.bool_)
@@ -313,10 +313,10 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         # if track:
             # self.tracker = np.empty((self.n_items, self.n_items), object)
         
-        print("SIZE OLD:", sys.getsizeof(np.empty((self.n_items, self.n_items), object)))
-        print("SIZE NEW:", os.path.getsize("tracker.hdf5"))
-        np.memmap("testing_size.mm", dtype=np.bool_, shape=(self.n_items, self.n_items, self.n_items), mode='w+')
-        print("SIZE MM:", os.path.getsize("testing_size.mm"))
+        # print("SIZE OLD:", sys.getsizeof(np.empty((self.n_items, self.n_items), object)))
+        # print("SIZE NEW:", os.path.getsize("tracker.hdf5"))
+        # np.memmap("testing_size.mm", dtype=np.bool_, shape=(self.n_items, self.n_items, self.n_items), mode='w+')
+        # print("SIZE MM:", os.path.getsize("testing_size.mm"))
             
         #     for i in range(self.n_items):
         #         self.tracker[self.n_items - 1][i] = tuple([i]) #record where it started, and where it ended
