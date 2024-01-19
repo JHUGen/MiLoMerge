@@ -42,19 +42,20 @@ class Merger():
 
         self.comp_to_first = comp_to_first
 
-        self.counts = da.vstack(counts)
+        self.counts = np.vstack(counts)
         self.counts /= self.counts.sum(axis=1)[:, None]
 
-        self.bin_edges = da.from_array(bin_edges)
+        self.bin_edges = np.from_array(bin_edges)
 
     @staticmethod
-    @nb.njit(parallel=True)
+    @nb.njit(parallel=True, fastmath=True)
     def _mlm(n, counts, weights, b, b_prime, comp_to_first):
+
         metric_val = 0
         if comp_to_first:
             initial_range = (0,)
         else:
-            comp_to_first = nb.prange(n)
+            comp_to_first = np.arange(n, dtype=np.int64)
 
         for h in initial_range:
             for h_prime in nb.prange(h+1, n):
@@ -119,7 +120,7 @@ class MergerLocal(Merger):
         return (temp_counts, temp_edges)
 
     def run(self, target_bin_number=1):
-        if self.n_hypotheses <= target_bin_number:
+        if self.n_items <= target_bin_number:
             warnings.warn("Merging is pointless! Number of bins already >= target")
 
         pbar = tqdm.tqdm(
