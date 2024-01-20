@@ -3,6 +3,7 @@ import numpy as np
 import tqdm
 import numba as nb
 import dask.array as da
+import time
 
 class Merger():
     def __init__(
@@ -45,17 +46,17 @@ class Merger():
         self.counts = np.vstack(counts)
         self.counts /= self.counts.sum(axis=1)[:, None]
 
-        self.bin_edges = np.from_array(bin_edges)
+        self.bin_edges = np.array(bin_edges)
 
     @staticmethod
-    @nb.njit(parallel=True, fastmath=True)
+    @nb.njit(fastmath=True)
     def _mlm(n, counts, weights, b, b_prime, comp_to_first):
 
         metric_val = 0
         if comp_to_first:
-            initial_range = (0,)
+            initial_range = np.arange(0)
         else:
-            comp_to_first = np.arange(n, dtype=np.int64)
+            initial_range = np.arange(n)
 
         for h in initial_range:
             for h_prime in nb.prange(h+1, n):
@@ -68,6 +69,7 @@ class Merger():
                 mat *= weights[h][h_prime]
 
                 metric_val += (mat[0][0]*mat[1][1])**2 + (mat[0][1]*mat[1][0])**2 - 2*np.prod(mat)
+
         return metric_val
 
 class MergerLocal(Merger):
@@ -82,34 +84,32 @@ class MergerLocal(Merger):
         if len(self.bin_edges.shape) > 1:
             raise ValueError("LOCAL MERGING CAN ONLY HANDLE 1-DIMENSIONAL ARRAYS")
 
-    @staticmethod
-    @nb.njit
-    def _merge(n, counts, bin_edges, i, j):
+    def _merge(self, i, j):
         if i == j + 1:
-            if i > n - 1 or i < 0:
+            if i > self.n_items - 1 or i < 0:
                 raise ValueError("UNHANDLED EDGE CASE WHILE MERGING")
             temp_counts = np.concatenate(
                 (
-                    counts[:, :j],
-                    np.array([counts[:, j] + counts[:, i]]).T,
-                    counts[:, i+1:]
+                    self.counts[:, :j],
+                    np.array([self.counts[:, j] + self.counts[:, i]]).T,
+                    self.counts[:, i+1:]
                 ),
                 axis=1
             )
-            temp_edges = np.concatenate((bin_edges[:i], bin_edges[i+1:]))
+            temp_edges = np.concatenate((self.bin_edges[:i], self.bin_edges[i+1:]))
 
         elif i == j - 1:
-            if i > n - 1 or i < 1:
+            if i > self.n_items - 1 or i < 1:
                 raise ValueError("UNHANDLED EDGE CASE WHILE MERGING")
             temp_counts = np.concatenate(
                 (
-                    counts[:, :i],
-                    np.array([counts[:, i] + counts[:, j]]).T,
-                    counts[:, j+1:]
+                    self.counts[:, :i],
+                    np.array([self.counts[:, i] + self.counts[:, j]]).T,
+                    self.counts[:, j+1:]
                 ),
                 axis=1
             )
-            temp_edges = np.concatenate((bin_edges[:i+1], bin_edges[i+2:]))
+            temp_edges = np.concatenate((self.bin_edges[:i+1], self.bin_edges[i+2:]))
 
         elif i == j:
             pass
@@ -131,14 +131,15 @@ class MergerLocal(Merger):
             combinations = {}
             scores = {}
 
-            def sweep_back_and_forth(i):
-                score = self._mlm(self.n_hypotheses, self.counts,
-                                  self.weights, i, i+1, self.comp_to_first)
+            for i in range(1, self.n_items - 1):
+                score = self._mlm(
+                    self.n_hypotheses, self.counts,
+                    self.weights, i, i+1, self.comp_to_first
+                    )
 
                 combinations[i] = (i, i+1)
                 scores[i] = score
 
-            _ = [sweep_back_and_forth(i) for i in range(1, self.n_items - 1)]
             score = self._mlm(
                 self.n_hypotheses, self.counts, self.weights,
                 1, 0, self.comp_to_first
@@ -151,11 +152,12 @@ class MergerLocal(Merger):
                 min(scores, key=scores.get)
                 ]
 
-            self.counts, self.bin_edges = self._merge(self.n_items, self.counts,
-                                                      self.bin_edges, min_1, min_2)
+            self.counts, self.bin_edges = self._merge(min_1, min_2)
 
+            self.n_items -= 1
             pbar.update(1)
 
+        return self.bin_edges
 
 
 
