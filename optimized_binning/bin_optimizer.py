@@ -5,6 +5,19 @@ import numba as nb
 import dask.array as da
 import time
 
+@nb.njit(fastmath=True, cache=True)
+def mlm_driver_comp_to_all(n, counts, weights, b, b_prime):
+
+    metric_val = 0
+    for h in np.arange(n):
+        for h_prime in nb.prange(h+1, n):
+            t1, t2 = counts[h][b]*weights[h][h_prime], counts[h_prime][b_prime]*weights[h][h_prime]
+            t3, t4 = counts[h][b_prime]*weights[h][h_prime], counts[h_prime][b]*weights[h][h_prime] 
+
+            metric_val += (t1*t2)**2 + (t3*t4)**2 - 2*t1*t2*t3*t4
+
+    return metric_val
+
 class Merger():
     def __init__(
             self,
@@ -51,20 +64,20 @@ class Merger():
         self.bin_edges = np.array(bin_edges)
 
     @staticmethod
-    @nb.njit(fastmath=True, cache=True)
+    @nb.njit(fastmath=True, cache=True, nogil=True)
     def __mlm_driver_comp_to_first(n, counts, weights, b, b_prime):
 
         metric_val = 0
-        for h_prime in nb.prange(h+1, n):
-            t1, t2 = counts[h][b]*weights[h][h_prime], counts[h_prime][b_prime]*weights[h][h_prime]
-            t3, t4 = counts[h][b_prime]*weights[h][h_prime], counts[h_prime][b]*weights[h][h_prime] 
+        for h_prime in nb.prange(1, n):
+            t1, t2 = counts[0][b]*weights[0][h_prime], counts[h_prime][b_prime]*weights[0][h_prime]
+            t3, t4 = counts[0][b_prime]*weights[0][h_prime], counts[h_prime][b]*weights[0][h_prime] 
 
             metric_val += (t1*t2)**2 + (t3*t4)**2 - 2*t1*t2*t3*t4
 
         return metric_val
 
     @staticmethod
-    @nb.njit(fastmath=True, cache=True)
+    @nb.njit(fastmath=True, cache=True, nogil=True)
     def __mlm_driver_comp_to_all(n, counts, weights, b, b_prime):
 
         metric_val = 0
@@ -150,25 +163,21 @@ class MergerLocal(Merger):
             desc="Binning locally:", leave=True, position=0
             )
         while self.n_items > target_bin_number:
-            combinations = {}
-            scores = {}
+            best_combo = None
+            best_score = np.inf
 
             for i in range(1, self.n_items - 1):
                 score = self._mlm(i, i+1)
 
-                combinations[i] = (i, i+1)
-                scores[i] = score
+                if score < best_score:
+                    best_combo = (i, i+1)
+                    best_score = score
 
             score = self._mlm(1, 0)
-            #try merging counts 1 with count 0 (backwards)
-            combinations[0] = (1, 0)
-            scores[0] = score
+            if score < best_score:
+                best_combo = (1, 0)
 
-            min_1, min_2 = combinations[
-                min(scores, key=scores.get)
-                ]
-
-            self.counts, self.bin_edges = self._merge(min_1, min_2)
+            self.counts, self.bin_edges = self._merge(*best_combo)
 
             self.n_items -= 1
             pbar.update(1)
@@ -208,44 +217,55 @@ class MergerNonlocal(Merger):
         self.scores = np.zeros((self.n_items, self.n_items), dtype=np.float64)
         self.things_to_recalculate = tuple(range(self.n_items))
 
+    def _merge(self, i, j):
+        k = 0
+        old_1 = old_2 = None
+        hit_first = False
+        for c in np.arange(self.n_items):
+            if c not in (i, j):
+                if c != k:
+                    self.counts[:, k] = self.counts[:, c]
+                    self.scores[:, k], self.scores[k] = self.scores[:, c], self.scores[c]
+                
+                k += 1
+            elif hit_first:
+                old_2 = self.counts[:, c].copy()
+            else:
+                old_1 = self.counts[:, c].copy()
+                hit_first = True
 
-    @staticmethod
-    @nb.njit
-    def _merge(n_orig, n, counts, score_matrix, i, j):
-        merged_counts = np.zeros(shape=(n_orig, n - 1), dtype=np.float64)
+        self.counts[:, k] = old_1 + old_2
+        self.counts = self.counts[:, :-1]
+        
+        self.scores[k:] = np.inf
+        self.scores[:,k:] = np.inf
 
-        # k = 0
-        # for c in nb.prange(n):
-        #     if c not in (i, j):
-        #         merged_counts[:, k] = counts[:, c]
-        #         score_matrix[:, k], score_matrix[k] = score_matrix[:, n], score_matrix[n]
+        self.things_to_recalculate = (k, )
 
-        #         k += 1
-        merged_counts[:, :-1] = np.delete(counts, [i,j])
-        merged_counts[:, -1] = counts[:, i] + counts[:, j]
-
-        score_matrix = np.delete(np.delete(score_matrix, [i, j], axis=0), [i, j], axis=1)
-        # score_matrix[k:] = score_matrix[:, k:] = np.inf
-
-        return counts, score_matrix, k
-
-    @staticmethod
-    @nb.njit
-    def __closest_pair_driver(n, counts, weights, things_to_recalculate, score_matrix, comp_to_first):
-        for i in nb.prange(n):
-            for j in nb.prange(things_to_recalculate):
-                if i == j:
-                    score_matrix[i][j] = np.inf
-                    continue
-                score_matrix[i][j] = Merger._mlm(n, counts, weights, i, j, comp_to_first)
-        return score_matrix
 
     def _closest_pair(self):
-        self.scores = self.__closest_pair_driver(self.n_items, self.counts, self.weights, self.things_to_recalculate, self.scores, self.comp_to_first)
+        for i in np.arange(self.n_items, dtype=np.int32):
+            for j in self.things_to_recalculate:
+                if i == j:
+                    self.scores[i][j] = np.inf
+                    continue
+                self.scores[i][j] = self._mlm(i, j)
+
         smallest_distance_index = np.unravel_index(self.scores.argmin(), self.scores.shape)
-        smallest_distance = self.scores[smallest_distance_index]
 
-        if not np.isfinite(smallest_distance):
-            raise ValueError("Distance function has produced nan/inf at some point")
+        return smallest_distance_index
 
-        return smallest_distance, smallest_distance_index
+    def run(self, target_bin_number=1):
+
+        pbar = tqdm.tqdm(
+            total=self.n_items - target_bin_number,
+            desc="Binning non-locally:", leave=True, position=0
+            )
+        while self.n_items > target_bin_number:
+            min_1, min_2 = self._closest_pair()
+            self._merge(min_1, min_2)
+
+            self.n_items -= 1
+            pbar.update(1)
+
+        return self.counts, self.bin_edges[:self.n_items + 1]
