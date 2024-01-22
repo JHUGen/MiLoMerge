@@ -3,22 +3,10 @@ import numpy as np
 import tqdm
 import numba as nb
 import dask.array as da
-import time
+import h5py
+from abc import ABC, abstractmethod
 
-@nb.njit(fastmath=True, cache=True)
-def mlm_driver_comp_to_all(n, counts, weights, b, b_prime):
-
-    metric_val = 0
-    for h in np.arange(n):
-        for h_prime in nb.prange(h+1, n):
-            t1, t2 = counts[h][b]*weights[h][h_prime], counts[h_prime][b_prime]*weights[h][h_prime]
-            t3, t4 = counts[h][b_prime]*weights[h][h_prime], counts[h_prime][b]*weights[h][h_prime] 
-
-            metric_val += (t1*t2)**2 + (t3*t4)**2 - 2*t1*t2*t3*t4
-
-    return metric_val
-
-class Merger():
+class Merger(ABC):
     def __init__(
             self,
             bin_edges,
@@ -63,32 +51,37 @@ class Merger():
 
         self.bin_edges = np.array(bin_edges)
 
+
     @staticmethod
-    @nb.njit(fastmath=True, cache=True, nogil=True)
+    @nb.njit(nb.float64(nb.int64, nb.float64[:, :], nb.float64[:, :], nb.int64, nb.int64), fastmath=True, cache=True, nogil=True)
     def __mlm_driver_comp_to_first(n, counts, weights, b, b_prime):
 
         metric_val = 0
-        for h_prime in nb.prange(1, n):
-            t1, t2 = counts[0][b]*weights[0][h_prime], counts[h_prime][b_prime]*weights[0][h_prime]
-            t3, t4 = counts[0][b_prime]*weights[0][h_prime], counts[h_prime][b]*weights[0][h_prime] 
+        for h_prime in np.arange(1, n, dtype=np.int64):
+            t1 = counts[0, b]*weights[0, h_prime]
+            t2 = counts[h_prime, b_prime]*weights[0, h_prime]
+            t3 = counts[0, b_prime]*weights[0, h_prime]
+            t4 = counts[h_prime, b]*weights[0, h_prime]
 
             metric_val += (t1*t2)**2 + (t3*t4)**2 - 2*t1*t2*t3*t4
 
         return metric_val
 
+
     @staticmethod
-    @nb.njit(fastmath=True, cache=True, nogil=True)
+    @nb.njit(nb.float64(nb.int64, nb.float64[:, :], nb.float64[:, :], nb.int64, nb.int64), fastmath=True, cache=True, nogil=True)
     def __mlm_driver_comp_to_all(n, counts, weights, b, b_prime):
 
         metric_val = 0
         for h in np.arange(n):
             for h_prime in nb.prange(h+1, n):
-                t1, t2 = counts[h][b]*weights[h][h_prime], counts[h_prime][b_prime]*weights[h][h_prime]
-                t3, t4 = counts[h][b_prime]*weights[h][h_prime], counts[h_prime][b]*weights[h][h_prime] 
+                t1, t2 = counts[h, b]*weights[h, h_prime], counts[h_prime, b_prime]*weights[h, h_prime]
+                t3, t4 = counts[h, b_prime]*weights[h, h_prime], counts[h_prime, b]*weights[h, h_prime] 
 
                 metric_val += (t1*t2)**2 + (t3*t4)**2 - 2*t1*t2*t3*t4
 
         return metric_val
+
 
     def _mlm(self, b, b_prime):
         if self.comp_to_first:
@@ -105,6 +98,15 @@ class Merger():
     def __repr__(self) -> str:
         return f"Merger of type {self._merger_type} merging {self.original_n_items}"
 
+    @abstractmethod
+    def _merge(self, i, j):
+        return NotImplemented
+
+
+    @abstractmethod
+    def run(self, target_bin_number=1):
+        return NotImplemented
+
 class MergerLocal(Merger):
     def __init__(
             self,
@@ -119,40 +121,38 @@ class MergerLocal(Merger):
 
         self._merger_type = "Local"
 
+
+    @staticmethod
+    @nb.njit(nb.types.Tuple((nb.float64[:, :], nb.float64[:]))(nb.float64[:, :], nb.float64[:], nb.int32, nb.int32), cache=True, fastmath=True, nogil=True)
+    def __merge_driver(counts, bin_edges, first_part, second_part):
+        new_counts = counts[:, :-1].copy()
+
+        new_counts[:, first_part] = (counts[:, first_part] + counts[:, second_part]).T
+        new_counts[:, first_part + 1:] = counts[:, second_part + 1:]
+
+        new_bin_edges = bin_edges[:-1].copy()
+        new_bin_edges[first_part + 1:] = bin_edges[second_part + 1:]
+
+        return (new_counts, new_bin_edges)
+
+
     def _merge(self, i, j):
         if i == j + 1:
             if i > self.n_items - 1 or i < 0:
                 raise ValueError("UNHANDLED EDGE CASE WHILE MERGING")
-            temp_counts = np.concatenate(
-                (
-                    self.counts[:, :j],
-                    np.array([self.counts[:, j] + self.counts[:, i]]).T,
-                    self.counts[:, i+1:]
-                ),
-                axis=1
-            )
-            temp_edges = np.concatenate((self.bin_edges[:i], self.bin_edges[i+1:]))
+            return self.__merge_driver(self.counts, self.bin_edges, j, i)
 
         elif i == j - 1:
             if i > self.n_items - 1 or i < 1:
                 raise ValueError("UNHANDLED EDGE CASE WHILE MERGING")
-            temp_counts = np.concatenate(
-                (
-                    self.counts[:, :i],
-                    np.array([self.counts[:, i] + self.counts[:, j]]).T,
-                    self.counts[:, j+1:]
-                ),
-                axis=1
-            )
-            temp_edges = np.concatenate((self.bin_edges[:i+1], self.bin_edges[i+2:]))
+            return self.__merge_driver(self.counts, self.bin_edges, i, j)
 
         elif i == j:
-            pass
+            return (self.counts, self.bin_edges)
 
         else:
             raise ValueError("This is local binning! Can only merge ahead or behind!")
 
-        return (temp_counts, temp_edges)
 
     def run(self, target_bin_number=1):
         if self.n_items <= target_bin_number:
@@ -185,7 +185,6 @@ class MergerLocal(Merger):
         return self.bin_edges
 
 
-
 class MergerNonlocal(Merger):
     def __init__(
             self,
@@ -193,7 +192,7 @@ class MergerNonlocal(Merger):
             *counts,
             weights=None,
             comp_to_first=False,
-            tracker_size=50
+            map_at = None
         ) -> None:
 
         unrolled_counts = list(map(np.ndarray.ravel, map(np.array, counts)))
@@ -204,6 +203,16 @@ class MergerNonlocal(Merger):
             weights=weights, comp_to_first=comp_to_first
             )
 
+        if map_at is None:
+            map_at = []
+        else:
+            try:
+                iter(map_at)
+            except:
+                raise TypeError("Parameter map_at must be an iterable!")
+
+        map_at = [i for i in map_at if i < self.n_items]
+
         self._merger_type = "Non-local"
 
         self.physical_bins = da.array(bin_edges)
@@ -213,37 +222,67 @@ class MergerNonlocal(Merger):
         else:
             self.n_observables = 1
 
-        self.__cur_iteration_tracker = {}
         self.scores = np.zeros((self.n_items, self.n_items), dtype=np.float64)
         self.things_to_recalculate = tuple(range(self.n_items))
 
+        if any(map_at):
+            self.__cur_iteration_tracker = dict(
+                zip(
+                    self.things_to_recalculate,
+                    [(i,) for i in self.things_to_recalculate]
+                    )
+            )
+            self.tracker =  h5py.File("tracker.hdf5", 'w', libver='latest', driver=None, )
+            for mapped_bincount in map_at:
+                self.tracker.create_dataset(
+                    str(mapped_bincount), (self.original_n_items), np.uint32,
+                    compression='gzip', compression_opts=9,
+                    fletcher32=True, fillvalue=0,
+                    maxshape=(self.original_n_items), shuffle=True
+                )
+
+        else:
+            self.__cur_iteration_tracker = {}
+            self.tracker = None
+
+        self.map_at = map_at
+
+
     def _merge(self, i, j):
         k = 0
-        old_1 = old_2 = None
-        hit_first = False
+        sum_term = np.zeros(self.n_hypotheses)
+        if self.tracker is not None:
+            old_tracker_entries = self.__cur_iteration_tracker[i] + self.__cur_iteration_tracker[j]
+
         for c in np.arange(self.n_items):
             if c not in (i, j):
                 if c != k:
                     self.counts[:, k] = self.counts[:, c]
                     self.scores[:, k], self.scores[k] = self.scores[:, c], self.scores[c]
-                
-                k += 1
-            elif hit_first:
-                old_2 = self.counts[:, c].copy()
-            else:
-                old_1 = self.counts[:, c].copy()
-                hit_first = True
 
-        self.counts[:, k] = old_1 + old_2
+                    if self.tracker is not None:
+                        self.__cur_iteration_tracker[k] = self.__cur_iteration_tracker[c]
+
+                k += 1
+            else:
+                sum_term += self.counts[:, c]
+
+        self.counts[:, k] = sum_term.T
         self.counts = self.counts[:, :-1]
         
-        self.scores[k:] = np.inf
-        self.scores[:,k:] = np.inf
+        self.scores = self.scores[:k+1, :k+1]
+        
+        self.scores[k] = np.inf
+        self.scores[:, k] = np.inf
 
         self.things_to_recalculate = (k, )
 
+        if self.tracker is not None:
+            self.__cur_iteration_tracker[k] = old_tracker_entries
+            del self.__cur_iteration_tracker[k+1]
 
-    def _closest_pair(self):
+
+    def __closest_pair(self):
         for i in np.arange(self.n_items, dtype=np.int32):
             for j in self.things_to_recalculate:
                 if i == j:
@@ -255,15 +294,26 @@ class MergerNonlocal(Merger):
 
         return smallest_distance_index
 
-    def run(self, target_bin_number=1):
 
+    def __convert_tracker(self):
+        new_map = np.empty(self.original_n_items)
+        for new_place in self.__cur_iteration_tracker.keys():
+            for original_place in self.__cur_iteration_tracker[new_place]:
+                new_map[original_place] = new_place
+
+        return new_map
+
+    def run(self, target_bin_number=1):
         pbar = tqdm.tqdm(
             total=self.n_items - target_bin_number,
             desc="Binning non-locally:", leave=True, position=0
             )
         while self.n_items > target_bin_number:
-            min_1, min_2 = self._closest_pair()
+            min_1, min_2 = self.__closest_pair()
             self._merge(min_1, min_2)
+
+            if self.n_items in self.map_at:
+                self.tracker[str(self.n_items)][:] = self.__convert_tracker()
 
             self.n_items -= 1
             pbar.update(1)
