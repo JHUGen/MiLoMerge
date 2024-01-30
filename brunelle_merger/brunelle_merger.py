@@ -217,7 +217,11 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
             msg += "\n({:.0f} >= {:.0f})".format(target_bin_number, self.n_items)
             msg += "\nNo merging will occur"
             warnings.warn("\n"+msg, title="WARNING")
-            
+        
+        pbar = tqdm.tqdm(
+            total=self.n_items - target_bin_number,
+            desc="Binning locally:", leave=True, position=0
+            )
         while self.n_items > target_bin_number:
             combinations = {}
             scores = {}
@@ -241,6 +245,7 @@ class Grim_Brunelle_merger(object):#Professor Nathan Brunelle!
             self.counts_to_merge, self.local_edges = temp_counts, temp_bins
             
             self.n_items -= 1
+            pbar.update(1)
             
         return self.counts_to_merge, self.local_edges
 
@@ -564,7 +569,7 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
         # print("USING INDICES:", indices, "With BRUTE_FORCE=", brute_force)
         smallest_distance = (np.inf, None, None)
         # for i in range(self.n_items):
-        for i in tqdm.tqdm(range(self.n_items), leave=False, position=0, total=self.n_items, desc=f"Iteration {self.original_n - self.n_items}"):
+        for i in range(self.n_items):
             for j in self.things_to_recalculate:
             # for j in tqdm.tqdm(self.things_to_recalculate, leave=False, position=0, total=len(self.things_to_recalculate), desc=f"running on bin {i}"):
                 if i == j:
@@ -600,16 +605,17 @@ class Grim_Brunelle_nonlocal(Grim_Brunelle_merger):
             msg += "\nNo merging will occur"
             warnings.warn("\n"+h.print_msg_box(msg, title="WARNING"))
             
-        # pbar = tqdm.tqdm(total=self.n_items - target_bin_number)
+        pbar = tqdm.tqdm(total=self.n_items - target_bin_number)
         while self.n_items > target_bin_number:
             start = time.time()
             distance, i, j = self.__closest_pair__()
+            # print(i, j)
             dist_time = time.time()
-            print("MLM TIME:", dist_time - start)
+            # print("MLM TIME:", dist_time - start)
             self.__merge__(i,j)
             merge_time = time.time()
-            print("MERGE TIME:", merge_time - dist_time)
-            # pbar.update(1)
+            # print("MERGE TIME:", merge_time - dist_time)
+            pbar.update(1)
         print()
         self.tracker_file.close()
     

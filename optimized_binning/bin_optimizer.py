@@ -2,7 +2,6 @@ import warnings
 import numpy as np
 import tqdm
 import numba as nb
-import dask.array as da
 import h5py
 from abc import ABC, abstractmethod
 
@@ -12,7 +11,8 @@ class Merger(ABC):
             bin_edges,
             *counts,
             weights=None,
-            comp_to_first=False
+            comp_to_first=False,
+            map_at = None
         ) -> None:
 
         it = iter(counts)
@@ -48,9 +48,41 @@ class Merger(ABC):
 
         self.counts = np.vstack(counts)
         self.counts /= self.counts.sum(axis=1)[:, None]
+        self.counts[~np.isfinite(self.counts)] = 0
 
         self.bin_edges = np.array(bin_edges)
 
+        if map_at is None:
+            map_at = []
+        else:
+            try:
+                iter(map_at)
+            except:
+                raise TypeError("Parameter map_at must be an iterable!")
+
+        self.map_at = [i for i in map_at if i < self.n_items]
+
+    @staticmethod
+    @nb.njit(nb.float64(nb.float64[:], nb.float64[:]), fastmath=True, cache=True)
+    def ROC_score(hypo_1, hypo_2):
+        raw_ratio = hypo_1.copy()/hypo_2
+        ratio_indices = np.argsort(raw_ratio)
+        # ratio_indices = np.isfinite(raw_ratio[ratio_indices])[::-1]
+        
+        length = len(ratio_indices) + 1
+        
+        TPR = np.zeros(length)
+        FPR = np.zeros(length)
+        
+        for n in nb.prange(length):
+            above_cutoff = ratio_indices[n:]
+            below_cutoff = ratio_indices[:n]
+            
+            TPR[n] = hypo_1[above_cutoff].sum()/(hypo_1[above_cutoff].sum() + hypo_1[below_cutoff].sum()) #gets the indices listed
+            
+            FPR[n] = hypo_2[below_cutoff].sum()/(hypo_2[above_cutoff].sum() + hypo_2[below_cutoff].sum())
+    
+        return np.trapz(TPR, FPR) - 0.5
 
     @staticmethod
     @nb.njit(nb.float64(nb.int64, nb.float64[:, :], nb.float64[:, :], nb.int64, nb.int64), fastmath=True, cache=True, nogil=True)
@@ -113,13 +145,28 @@ class MergerLocal(Merger):
             bin_edges,
             *counts,
             weights=None,
-            comp_to_first=False
+            comp_to_first=False,
+            map_at = None,
+            file_prefix=""
         ) -> None:
-        super().__init__(bin_edges, *counts, weights=weights, comp_to_first=comp_to_first)
+        super().__init__(bin_edges, *counts, weights=weights, comp_to_first=comp_to_first, map_at=map_at)
         if len(self.bin_edges.shape) > 1:
             raise ValueError("LOCAL MERGING CAN ONLY HANDLE 1-DIMENSIONAL ARRAYS")
 
         self._merger_type = "Local"
+
+        if any(map_at):
+            self.tracker =  h5py.File(f".{file_prefix}_tracker.hdf5", 'w', libver='latest', driver=None, )
+            for mapped_bincount in map_at:
+                self.tracker.create_dataset(
+                    str(mapped_bincount), (mapped_bincount + 1), np.float64,
+                    compression='gzip', compression_opts=9,
+                    fletcher32=True, fillvalue=0,
+                    maxshape=len(bin_edges), shuffle=True
+                )
+        else:
+            self.tracker = None
+
 
 
     @staticmethod
@@ -168,7 +215,7 @@ class MergerLocal(Merger):
 
             for i in range(1, self.n_items - 1):
                 score = self._mlm(i, i+1)
-
+                
                 if score < best_score:
                     best_combo = (i, i+1)
                     best_score = score
@@ -180,8 +227,13 @@ class MergerLocal(Merger):
             self.counts, self.bin_edges = self._merge(*best_combo)
 
             self.n_items -= 1
+
+            if self.n_items in self.map_at:
+                self.tracker[str(self.n_items)][:] = self.bin_edges
             pbar.update(1)
 
+        if self.tracker is not None:
+            self.tracker.close()
         return self.bin_edges
 
 
@@ -192,7 +244,8 @@ class MergerNonlocal(Merger):
             *counts,
             weights=None,
             comp_to_first=False,
-            map_at = None
+            map_at = None,
+            file_prefix=""
         ) -> None:
 
         unrolled_counts = list(map(np.ndarray.ravel, map(np.array, counts)))
@@ -203,19 +256,9 @@ class MergerNonlocal(Merger):
             weights=weights, comp_to_first=comp_to_first
             )
 
-        if map_at is None:
-            map_at = []
-        else:
-            try:
-                iter(map_at)
-            except:
-                raise TypeError("Parameter map_at must be an iterable!")
-
-        map_at = [i for i in map_at if i < self.n_items]
-
         self._merger_type = "Non-local"
 
-        self.physical_bins = da.array(bin_edges)
+        self.physical_bins = np.array(bin_edges)
 
         if len(self.physical_bins.shape) > 1:
             self.n_observables = bin_edges.shape[0]
@@ -232,7 +275,7 @@ class MergerNonlocal(Merger):
                     [(i,) for i in self.things_to_recalculate]
                     )
             )
-            self.tracker =  h5py.File("tracker.hdf5", 'w', libver='latest', driver=None, )
+            self.tracker =  h5py.File(f".{file_prefix}_tracker.hdf5", 'w', libver='latest', driver=None, )
             for mapped_bincount in map_at:
                 self.tracker.create_dataset(
                     str(mapped_bincount), (self.original_n_items), np.uint32,
@@ -241,11 +284,10 @@ class MergerNonlocal(Merger):
                     maxshape=(self.original_n_items), shuffle=True
                 )
 
+                np.save(f".{file_prefix}_physical_bins.npy", self.physical_bins, fix_imports=False, allow_pickle=False)
         else:
             self.__cur_iteration_tracker = {}
             self.tracker = None
-
-        self.map_at = map_at
 
 
     def _merge(self, i, j):
@@ -303,7 +345,11 @@ class MergerNonlocal(Merger):
 
         return new_map
 
+
     def run(self, target_bin_number=1):
+        if self.n_items <= target_bin_number:
+            warnings.warn("Merging is pointless! Number of bins already >= target")
+
         pbar = tqdm.tqdm(
             total=self.n_items - target_bin_number,
             desc="Binning non-locally:", leave=True, position=0
@@ -312,10 +358,12 @@ class MergerNonlocal(Merger):
             min_1, min_2 = self.__closest_pair()
             self._merge(min_1, min_2)
 
+            self.n_items -= 1
             if self.n_items in self.map_at:
                 self.tracker[str(self.n_items)][:] = self.__convert_tracker()
 
-            self.n_items -= 1
             pbar.update(1)
 
+        if self.tracker is not None:
+            self.tracker.close()
         return self.counts, self.bin_edges[:self.n_items + 1]

@@ -131,11 +131,11 @@ def ROC_curve(sample1, sample2):
         returns the true rate, the false rate, and the area under the curve (assuming true rate is the x value)
     """
     
-    sample1 = np.array(sample1)
-    sample2 = np.array(sample2)
-    hypo1_counts = sample1.copy()/sample1.sum()
-    hypo2_counts = sample2.copy()/sample2.sum()
-        
+    hypo1_counts = np.array(sample1)
+    hypo2_counts = np.array(sample2)
+    
+    sample_sum1 = sample1.sum()
+    sample_sum2 = sample2.sum()
     
     # print(list(g1_phi_counts))
     # print()
@@ -157,6 +157,7 @@ def ROC_curve(sample1, sample2):
     NAC = np.zeros(length) #"negative" above cutoff
     NBC = np.zeros(length) #"negative" below cutoff
     
+    S1 = 0
     
     for n in range(length):
         above_cutoff = ratios[n:]
@@ -168,6 +169,11 @@ def ROC_curve(sample1, sample2):
         NAC[n] = hypo2_counts[above_cutoff].sum()
         NBC[n] = hypo2_counts[below_cutoff].sum()
         
+        if n > 0:
+            S1 += hypo1_counts[ratios[n - 1]]*(hypo2_counts[below_cutoff].sum())**2
+        # else:
+        #     S = hypo1_counts[ratios[n]]*(hypo2_counts[below_cutoff].sum())**2
+
         # for bin_index in above_cutoff: #The above lines are the same as this commented code but vectorized
         #     PAC += g1_phi_counts[bin_index]
         #     NAC += g4_phi_counts[bin_index]
@@ -177,12 +183,18 @@ def ROC_curve(sample1, sample2):
         #     NBC += g4_phi_counts[bin_index]
         # TPR.append(1 - PAC/(PAC + PBC))
         # FPR.append(1 - NAC/(NAC + NBC))
-        
-        
+    
+    S1 /= sample_sum1*sample_sum2**2
+    S2 = (hypo2_counts*(hypo1_counts.sum()**2)).sum()
+    S2 /= sample_sum2*sample_sum1**2
+    
+    err = S1 + S2
+    
+    PAC, PBC = PAC/sample_sum1, PBC/sample_sum1
+    NAC, NBC = NAC/sample_sum2, NBC/sample_sum2
+    
     TPR = PAC/(PAC + PBC) #vectorized calculation
     FPR = NAC/(NAC + NBC)
     
-    TPR[~np.isfinite(TPR)] = 0
-    FPR[~np.isfinite(FPR)] = 0
     
-    return TPR, FPR, np.abs(np.trapz(FPR, TPR))
+    return TPR, FPR, np.abs(np.trapz(FPR, TPR)), err
