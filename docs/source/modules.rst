@@ -1,8 +1,9 @@
-brunelle_merger
+Optimized Binning
 ===============
 
 .. toctree::
    :maxdepth: 4
 
-   brunelle_merger
-   SUPER_ROC_Curves
+   bin_optimizer
+   ROC_curves
+   place_from_map

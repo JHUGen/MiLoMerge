@@ -64,7 +64,7 @@ exclude_patterns = []
 #Getting it to find the modules
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../brunelle_merger/'))
+sys.path.insert(0, os.path.abspath('../../optimized_binning/'))
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
