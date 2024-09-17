@@ -17,8 +17,8 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'bin_merging'
-copyright = '2023, M. Panagioutou, M. Srivastav, L. Kang, A.V. Gritsan'
+project = 'Bin Optimizer'
+copyright = '2024, M. Panagioutou, M. Srivastav, L. Kang, A.V. Gritsan'
 author = 'M. Panagioutou, M. Srivastav, L. Kang, A.V. Gritsan'
 
 # -- General configuration ---------------------------------------------------
@@ -36,7 +36,7 @@ extensions = ['sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
     ]
 
-autoclass_content = "init"
+autoclass_content = "both"
 
 #Napoleon Settings
 napoleon_google_docstring = True

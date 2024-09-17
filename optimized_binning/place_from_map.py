@@ -1,13 +1,45 @@
-import numpy as np
-import h5py
 import warnings
 import os
+import numpy as np
+import h5py
 
 def load_file_local(fname, key):
+    """Simple function to load and return an h5py file
+
+    Parameters
+    ----------
+    fname : str
+        The filename to load
+    key : str
+        The key to load for the h5py file
+
+    Returns
+    -------
+    numpy.ndarray
+        Returns a copy of the array that is being accessed through h5py
+    """
     f = h5py.File(fname, 'r')
     return f[key][:]
 
 def load_file_nonlocal(fname_tracker, fname_bins, key):
+    """Simple function to load and return an h5py file
+    alongside its corresponding "physical bins" file
+
+    Parameters
+    ----------
+    fname_tracker : str
+        The filename of the tracker (h5py file)
+    fname_bins : str
+        The filename of the physical bins file
+    key : str
+        The key to load for the h5py file
+
+    Returns
+    -------
+    tuple[numpy.ndarray, numpy.ndarray]
+        Returns a copy of the array that is being accessed through h5py
+        alongside a copy of the physical bins
+    """
     f = h5py.File(fname_tracker, 'r')
     bin_mapping = f[key][:]
 
@@ -16,6 +48,34 @@ def load_file_nonlocal(fname_tracker, fname_bins, key):
     return bin_mapping, physical_bins
 
 def place_event_nonlocal(N, *observable, file_prefix="", verbose=False):
+    """Places a given event within the appropriate bin using a binmap and the 
+    original physical bins
+
+    Parameters
+    ----------
+    N : _type_
+        _description_
+    file_prefix : str, optional
+        _description_, by default ""
+    verbose : bool, optional
+        _description_, by default False
+
+    Returns
+    -------
+    _type_
+        _description_
+
+    Raises
+    ------
+    ValueError
+        _description_
+    ValueError
+        _description_
+    ValueError
+        _description_
+    ValueError
+        _description_
+    """
 
     fname_tracker = f".{file_prefix}_tracker.hdf5"
     fname_bins = f".{file_prefix}_physical_bins.npy"
@@ -40,7 +100,12 @@ def place_event_nonlocal(N, *observable, file_prefix="", verbose=False):
             for i in range(physical_bins.shape[0]):
                 print('[', physical_bins[i][nonzero_rolled[i]], ',', physical_bins[i][int(nonzero_rolled[i]+1)], ']')
 
-        unrolled_index = (np.power(n_physical_bins - 1, np.arange(n_observables - 1,-1,-1, np.int16))*nonzero_rolled).sum()
+        unrolled_index = (
+            np.power(
+                n_physical_bins - 1, 
+                np.arange(n_observables - 1,-1,-1, np.int16)
+                )*nonzero_rolled
+            ).sum()
 
     elif len(physical_bins.shape) > 1 or len(observable) > 1:
         raise ValueError("Shapes are incompatible")
@@ -49,13 +114,11 @@ def place_event_nonlocal(N, *observable, file_prefix="", verbose=False):
             raise ValueError
 
         unrolled_index = np.searchsorted(physical_bins, observable) - 1
-    
+
     try:
         mapped_index = bin_mapping[unrolled_index][0]
-    except IndexError:
-        raise ValueError(f"{observable} is outside of the provided phase space!")
-    except:
-        raise
+    except IndexError as e:
+        raise ValueError(f"{observable} is outside of the provided phase space!") from e
 
     return mapped_index
 
@@ -65,10 +128,12 @@ def place_array_nonlocal(N, observables, file_prefix="", verbose=False):
     fname_bins = f".{file_prefix}_physical_bins.npy"
     bin_mapping, physical_bins = load_file_nonlocal(fname_tracker, fname_bins, str(N))
     observables_stacked = np.array(observables)
-    
+
     if physical_bins.ndim > 1:
         if len(observables_stacked[0]) != len(physical_bins):
-            raise ValueError(f"Number of observables {len(observables_stacked[0])} != Number of bin dimensions {len(physical_bins)}")
+            raise ValueError(
+                f"Number of observables {len(observables_stacked[0])} != Number of bin dimensions {len(physical_bins)}"
+                )
         n_physical_bins = physical_bins.shape[1]
         
         n_datapoints, n_observables = observables_stacked.shape
@@ -78,9 +143,9 @@ def place_array_nonlocal(N, observables, file_prefix="", verbose=False):
         if verbose:
             print("Original indices")
             print(nonzero_rolled)
-    
+
         unrolled_index = (np.power(n_observables - 1, np.arange(n_observables - 1,-1,-1, np.int16))*nonzero_rolled).sum(axis=1)
-    
+
     else:
         if observables_stacked.ndim != physical_bins.ndim:
             raise ValueError(f"Number of observables {1} != Number of bin dimensions {1}")
@@ -91,7 +156,7 @@ def place_array_nonlocal(N, observables, file_prefix="", verbose=False):
     test_arr = np.logical_or(nonzero_rolled < 0, nonzero_rolled > n_physical_bins - 1)
     if np.any(test_arr):
         raise ValueError(f"observables at indices {np.nonzero(test_arr)} is outside of the provided phase space!")
-    
+
     return bin_mapping[unrolled_index].ravel()
 
 def place_local(N, observable_array, file_prefix="", verbose=False):

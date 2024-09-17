@@ -26,13 +26,17 @@ class Merger(ABC):
         counts : numpy.ndarray
             A series of arrays that correspond to the number of events between your bin edges
         weights : numpy.ndarray, optional
-            An array of the weights associated for each of the counts. If none are provided, the weights will be 1, by default None
+            An array of the weights associated for each of the counts. 
+            If none are provided, the weights will be 1, by default None
         comp_to_first : bool, optional
-            Whether you would like to compare all samples to the first one provided, as opposed to all of them to each other, by default False
+            Whether you would like to compare all samples to the first one provided, 
+            as opposed to all of them to each other, by default False
         map_at : list, optional
-            A list of bin numbers at which you would like the mapping from the original sample to be recorded, by default None
+            A list of bin numbers at which you would like the mapping 
+            from the original sample to be recorded, by default None
         brute_force_at : int, optional
-            A value at or below which the merger will utilize the "brute-force" approach of merging by calculating a total ROC score, by default 10
+            A value at or below which the merger will utilize the "brute-force" 
+            approach of merging by calculating a total ROC score, by default 10
 
         Raises
         ------
@@ -97,7 +101,7 @@ class Merger(ABC):
 
     @staticmethod
     @nb.njit(fastmath=True, cache=True, nogil=True, parallel=True)
-    def __ROC_score_comp_to_first(counts, weights, b, b_prime):
+    def __roc_score_comp_to_first(counts, weights, b, b_prime):
         """This method calls ROC_curves.ROC_score to compare all samples to the first "sm" sample 
         provided and issue a score between the two bin indices.
         
@@ -122,7 +126,7 @@ class Merger(ABC):
         roc_summation = 0
         merged_into, to_be_merged =  sorted((b, b_prime))
         h = 0
-        
+
         to_be_merged_val = counts[0, to_be_merged]
         h_counts = np.delete(counts[0], to_be_merged)
         h_counts[merged_into] += to_be_merged_val
@@ -152,7 +156,7 @@ class Merger(ABC):
         weights : numpy.ndarray
             An ndarray of the weights for each of the samples
         b : int
-            the index of the first bin that is being calculated
+           #if c == k then you don't need to do anything! The bins pre and post merge will be the same the index of the first bin that is being calculated
         b_prime : int
             the index of the second bin that is being calculated
 
@@ -176,7 +180,7 @@ class Merger(ABC):
 
     @staticmethod
     @nb.njit(fastmath=True, cache=True, nogil=True, parallel=True)
-    def __ROC_score_comp_to_all(counts, weights, b, b_prime):
+    def __roc_score_comp_to_all(counts, weights, b, b_prime):
         """This method calls ROC_curves.ROC_score to compare all samples to each other 
         and issue a score between the two bin indices.
         
@@ -211,7 +215,7 @@ class Merger(ABC):
                 h_prime_counts = np.delete(h_prime_counts, to_be_merged)
                 h_prime_counts[merged_into] += to_be_merged_val
                 roc_summation += ROC_score(h_counts, h_prime_counts)*weights[h, h_prime]
-                # print(f"ROC summation of {roc_summation} at hypotheses {h},{h_prime} merging {b},{b_prime} with array length {len(counts[0])}")
+
         return 1/roc_summation
 
     @staticmethod
@@ -238,7 +242,7 @@ class Merger(ABC):
         float
             The score, as prescribed by the MLM metric
         """
-        
+
         metric_val = 0
         for h in np.arange(n):
             for h_prime in np.arange(h+1, n):
@@ -253,7 +257,10 @@ class Merger(ABC):
 
 
     def _mlm(self, b, b_prime):
-        """A wrapper for the ROC_score and mlm_drivers to make life easier
+        """Computes the score between selected bins. 
+        If the number of bins is below the brute_force_at value, 
+        then the "brute-force" algorithm will be used, otherwise
+        the MLM metric will be used to eavaluate
 
         Parameters
         ----------
@@ -269,12 +276,12 @@ class Merger(ABC):
         """
         if self.utilize_brute_force:
             if self.comp_to_first:
-                return self.__ROC_score_comp_to_first(
+                return self.__roc_score_comp_to_first(
                     self.counts.copy(), self.weights,
                     b, b_prime
                 )
             else:
-                return self.__ROC_score_comp_to_all(
+                return self.__roc_score_comp_to_all(
                     self.counts.copy(), self.weights,
                     b, b_prime
                 )
@@ -320,13 +327,13 @@ class Merger(ABC):
 
 
     @abstractmethod
-    def run(self, target_bin_number=1):
+    def run(self, target_bin_number=2):
         """Runs the merger
 
         Parameters
         ----------
         target_bin_number : int, optional
-            The number of bins you would like to merge down to, by default 1
+            The number of bins you would like to merge down to, by default 2
 
         Returns
         -------
@@ -336,6 +343,10 @@ class Merger(ABC):
         return NotImplemented
 
 class MergerLocal(Merger):
+    """
+    A merger that merges bins locally. 
+    This will not change the physical ordering of the bin edges.
+    """
     def __init__(
             self,
             bin_edges,
@@ -346,14 +357,50 @@ class MergerLocal(Merger):
             brute_force_at=0,
             file_prefix=""
         ) -> None:
-        super().__init__(bin_edges, *counts, weights=weights, comp_to_first=comp_to_first, map_at=map_at, brute_force_at=brute_force_at)
-        if len(self.bin_edges.shape) > 1:
+        """The initializer for the local merging class
+
+        Parameters
+        ----------
+        bin_edges : numpy.ndarray
+            These are the edges of your histogram that correspond to physical quantities
+        counts : numpy.ndarray
+            A series of arrays that correspond to the number of events between your bin edges
+        weights : numpy.ndarray, optional
+            An array of the weights associated for each of the counts. 
+            If none are provided, the weights will be 1, by default None
+        comp_to_first : bool, optional
+            Whether you would like to compare all samples to the first one 
+            provided, as opposed to all of them to each other, by default False
+        map_at : list, optional
+            A list of bin numbers at which you would like the mapping from 
+            the original sample to be recorded, by default None
+        brute_force_at : int, optional
+            A value at or below which the merger will utilize the "brute-force" approach 
+            of merging by calculating a total ROC score, by default 10
+        file_prefix : str, optional
+            This is the prefix that comes before the file bin map before "_tracker.hdf5"
+
+        Raises
+        ------
+        ValueError
+            The dimension of the bin edges can only be 1-dimensional
+        """
+        super().__init__(
+            bin_edges, *counts, weights=weights, comp_to_first=comp_to_first,
+            map_at=map_at, brute_force_at=brute_force_at
+            )
+
+        if self.bin_edges.ndim > 1:
             raise ValueError("LOCAL MERGING CAN ONLY HANDLE 1-DIMENSIONAL ARRAYS")
 
         self._merger_type = "Local"
 
         if any(self.map_at):
-            self.tracker =  h5py.File(f".{file_prefix}_tracker.hdf5", 'w', libver='latest', driver=None, )
+            self.tracker =  h5py.File(
+                f".{file_prefix}_tracker.hdf5", 'w', 
+                libver='latest', driver=None, 
+                )
+
             for mapped_bincount in self.map_at:
                 self.tracker.create_dataset(
                     str(mapped_bincount), (mapped_bincount + 1), np.float64,
@@ -366,8 +413,30 @@ class MergerLocal(Merger):
 
 
     @staticmethod
-    @nb.njit(nb.types.Tuple((nb.float64[:, :], nb.float64[:]))(nb.float64[:, :], nb.float64[:], nb.int32, nb.int32), cache=True, fastmath=True, nogil=True)
+    @nb.njit( 
+        cache=True, fastmath=True, nogil=True
+        )
     def __merge_driver(counts, bin_edges, first_part, second_part):
+        """This method is the numba-ified function that is called by _merge. 
+        It handles merging two histogram bins together and editing the bin edges inplace
+
+        Parameters
+        ----------
+        counts : numpy.ndarray
+            A ndarray of the counts with shape (#samples, #bins)
+        bin_edges : numpy.ndarray
+            A 1-d array of bin edges that correspond to some physical meaning
+        first_part : int
+            The index that corresponds with the smaller of the two bin eges being merged
+        second_part : int
+            The index that corresponds with the larger of the two bin eges being merged
+
+        Returns
+        -------
+        Tuple[numpy.ndarray, numpy.ndarray]
+            A tuple of the new counts with two bins merged
+            and a 1-d array of the new bin edges with one of the bin edges removed 
+        """
         new_counts = counts[:, :-1].copy()
 
         new_counts[:, first_part] = (counts[:, first_part] + counts[:, second_part]).T
@@ -380,6 +449,29 @@ class MergerLocal(Merger):
 
 
     def _merge(self, i, j):
+        """Merges bins i and j such that
+        the first and last bin edge are always preserved
+
+        Parameters
+        ----------
+        i : int
+            The first index to merge
+        j : int
+            The second index to merge
+
+        Returns
+        -------
+        Tuple[numpy.ndarray, numpy.ndarray]
+            A tuple of the new counts with two bins merged
+            and a 1-d array of the new bin edges with one of the bin edges removed 
+
+        Raises
+        ------
+        ValueError
+            Raise an error if there are unhandled edge cases where i or j are invalid
+        ValueError
+            Raise an error if bins are sent to the function nonlocally
+        """
         if i == j + 1:
             if i > self.n_items - 1 or i < 0:
                 raise ValueError("UNHANDLED EDGE CASE WHILE MERGING")
@@ -398,6 +490,19 @@ class MergerLocal(Merger):
 
 
     def run(self, target_bin_number=2):
+        """Runs the merger
+
+        Parameters
+        ----------
+        target_bin_number : int, optional
+            The number of bins you would like to merge down to, by default 2
+
+        Returns
+        -------
+        numpy.ndarray
+            Returns the 1-d bin edges that would 
+            correspond to the best binning for the number of bins you want
+        """
         if self.n_items <= target_bin_number:
             warnings.warn("Merging is pointless! Number of bins already >= target")
 
@@ -435,6 +540,7 @@ class MergerLocal(Merger):
 
 
 class MergerNonlocal(Merger):
+    """A merger that merges bins non-locally. Bin edges are irrelevant here."""
     def __init__(
             self,
             bin_edges,
@@ -445,6 +551,34 @@ class MergerNonlocal(Merger):
             brute_force_at=10,
             file_prefix=""
         ) -> None:
+        """The initializer for the non-local merging class
+
+        Parameters
+        ----------
+        bin_edges : numpy.ndarray
+            These are the edges of your histogram that correspond to physical quantities
+        counts : numpy.ndarray
+            A series of arrays that correspond to the number of events between your bin edges
+        weights : numpy.ndarray, optional
+            An array of the weights associated for each of the counts. 
+            If none are provided, the weights will be 1, by default None
+        comp_to_first : bool, optional
+            Whether you would like to compare all samples to the first one 
+            provided, as opposed to all of them to each other, by default False
+        map_at : list, optional
+            A list of bin numbers at which you would like the mapping from 
+            the original sample to be recorded, by default None
+        brute_force_at : int, optional
+            A value at or below which the merger will utilize the "brute-force" approach 
+            of merging by calculating a total ROC score, by default 10
+        file_prefix : str, optional
+            This is the prefix that comes before the file bin map before "_tracker.hdf5"
+
+        Raises
+        ------
+        ValueError
+            The dimension of the bin edges can only be 1-dimensional
+        """
 
         unrolled_counts = list(map(np.ndarray.ravel, map(np.array, counts)))
         unrolled_bins = np.arange(len(unrolled_counts[0]) + 1)
@@ -474,7 +608,11 @@ class MergerNonlocal(Merger):
                     [(i,) for i in self.things_to_recalculate]
                     )
             )
-            self.tracker =  h5py.File(f".{file_prefix}_tracker.hdf5", 'w', libver='latest', driver=None, )
+            self.tracker =  h5py.File(
+                f".{file_prefix}_tracker.hdf5", 'w',
+                libver='latest', driver=None,
+                )
+
             for mapped_bincount in self.map_at:
                 self.tracker.create_dataset(
                     str(mapped_bincount), (self.original_n_items), np.uint32,
@@ -491,14 +629,28 @@ class MergerNonlocal(Merger):
 
 
     def _merge(self, i, j):
+        """Merge bins i and j together
+        The merged bins are placed at the end of the new array
+        
+
+        Parameters
+        ----------
+        i : int
+            The first index to merge
+        j : int
+            The second index to merge
+        """
         k = 0
         sum_term = np.zeros(self.n_hypotheses)
         if self.tracker is not None:
+            #add tuples that contain original indices within the key of the new indices
             old_tracker_entries = self.__cur_iteration_tracker[i] + self.__cur_iteration_tracker[j]
 
         for c in np.arange(self.n_items):
             if c not in (i, j):
-                if c != k:
+                #if c == k then you don't need to do anything! 
+                #The bins pre and post merge will be the same
+                if c != k: 
                     self.counts[:, k] = self.counts[:, c]
                     self.scores[:, k], self.scores[k] = self.scores[:, c], self.scores[c]
 
@@ -507,8 +659,10 @@ class MergerNonlocal(Merger):
 
                 k += 1
             else:
+                # add the merged terms to an accumulator
                 sum_term += self.counts[:, c]
 
+        #last entry of the new array is the sum of the merged terms
         self.counts[:, k] = sum_term.T
         self.counts = self.counts[:, :-1]
 
@@ -525,6 +679,16 @@ class MergerNonlocal(Merger):
 
 
     def __closest_pair(self):
+        """Recalculates the scores that it needs to
+        according to self.things_to_recalculate
+        and picks the smallest score from
+        the score matrix
+
+        Returns
+        -------
+        tuple[int, int]
+            A 2d index for self.scores
+        """
         for i in np.arange(self.n_items, dtype=np.int64):
             for j in self.things_to_recalculate:
                 if i == j:
@@ -538,6 +702,17 @@ class MergerNonlocal(Merger):
 
 
     def __convert_tracker(self):
+        """Converts the internal tracker into a bin map
+        That maps original bin indices to new ones
+
+        Returns
+        -------
+        numpy.ndarray
+            A 1-d array where the each element holds the new index of that index
+            (i.e. the $i^{th}$ element of the array contains a value j,
+            that value j is the new placement for any element that would
+            land in i for the original binning)
+        """
         new_map = np.empty(self.original_n_items)
         for new_place, original_placement in self.__cur_iteration_tracker.items():
             for original_place in original_placement:
@@ -547,6 +722,20 @@ class MergerNonlocal(Merger):
 
 
     def run(self, target_bin_number=2):
+        """Runs the merger
+
+        Parameters
+        ----------
+        target_bin_number : int, optional
+            The number of bins you would like to merge down to, by default 2
+
+        Returns
+        -------
+        numpy.ndarray
+            Returns an array containing all the new counts for the nonlocal array
+            since bin edges are now meaningless. The array has shape
+            (# samples, target_bin_number)
+        """
         if self.n_items <= target_bin_number:
             warnings.warn("Merging is pointless! Number of bins already >= target")
 
@@ -572,4 +761,4 @@ class MergerNonlocal(Merger):
 
         if self.tracker is not None:
             self.tracker.close()
-        return self.counts, self.bin_edges[:self.n_items + 1]
+        return self.counts
