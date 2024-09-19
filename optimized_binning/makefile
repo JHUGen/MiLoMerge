@@ -1,4 +1,4 @@
-CPPFLAGS=-I /home/mohit/deb_packages/eigen-3.4.0/ -I ./ -g -std=c++11 -O2
+CPPFLAGS=-I/usr/include/eigen3 -I./ -g -O2 $(shell root-config --cflags) $(shell root-config --libs) -Lrootlib
 
 all:
 	g++ bin_splitter.cpp  $(CPPFLAGS) -c -g;\

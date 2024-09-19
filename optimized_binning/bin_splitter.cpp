@@ -71,6 +71,7 @@ void bin_splitter::initialize(
     this->observablesList = std::vector<int>(this->nObservables);
     this->encodedFinalStrings = std::vector<std::string>();
     this->finalBinCounts = std::vector<int>();
+    this->previousCalculations = std::unordered_map<std::string, double>();
     
     //matrices of size (this->nPoints, this->nObservables + 1)
     this->data = std::vector<Eigen::ArrayXXd>(this->nHypotheses);
@@ -190,7 +191,10 @@ void bin_splitter::split(
         )(Eigen::seq(1, granularity)); //utilizing the edges is useless!
     }
     size_t nBins = 1;
+
     while (nBins < nBinsDesired){
+        std::cerr << "nBins=" << nBins << "/" << nBinsDesired << "\r";
+        std::cerr.flush();
         const size_t nLeaves = (this->bins).size();
         ArrayXld scoresPerParent = ArrayXld(nLeaves);
 
@@ -202,14 +206,23 @@ void bin_splitter::split(
             scores.setZero(); //reset scores for this parent
             for(int obs = 0; obs < this->nObservables; obs++){
                 for(int edgeIndex = 0; edgeIndex < granularity; edgeIndex++){
+                    double cut = possibleEdges.coeff(edgeIndex, obs);
+
+                    //Just use the ">" cut to show that it's already been calculated
+                    std::string encoding = it.first + ";" + std::to_string(obs) + ">" + std::to_string(cut);
+                    if(this->previousCalculations.find(encoding) != this->previousCalculations.end()){
+                        scores(edgeIndex, obs) = this->previousCalculations[encoding];
+                        continue;
+                        //skip if calculation was already done
+                    }
+
                     std::vector<std::vector<int>> b1;
                     std::vector<std::vector<int>> b2;
-                    double cut = possibleEdges.coeff(edgeIndex, obs);
                     long double score = 0;
 
-                    std::cout << "Trying cut of " << obs << " > " << cut << std::endl;
-                    std::cout << "At index: (" << edgeIndex << "," << obs << ")" << std::endl;
-                    std::cout << "On possible parent " << parentCounter << ": " << it.first << std::endl;
+                    // std::cout << "Trying cut of " << obs << " > " << cut << std::endl;
+                    // std::cout << "At index: (" << edgeIndex << "," << obs << ")" << std::endl;
+                    // std::cout << "On possible parent " << parentCounter << ": " << it.first << std::endl;
                     size_t h = 0;
                     bool breakLoop = false;
                     for(std::vector<int> hypothesisIndices : it.second){
@@ -235,11 +248,12 @@ void bin_splitter::split(
                         continue;
                     }
                     this->score(b1, b2, scores(edgeIndex, obs), false);
-                    std::cout << "score of: " << scores.coeff(edgeIndex, obs) << std::endl;
+                    this->previousCalculations[encoding] = scores.coeff(edgeIndex, obs);
+                    // std::cout << "score of: " << scores.coeff(edgeIndex, obs) << std::endl;
                 }
             }
             scoresPerParent(parentCounter) = scores.maxCoeff(&maxRow, &maxCol);
-            std::cout << "picked best score at index: " << maxRow << "," << maxCol << std::endl;
+            // std::cout << "picked best score at index: " << maxRow << "," << maxCol << std::endl;
             obsAndEdgeIndexPerParent[parentCounter] = std::make_pair(maxRow, maxCol);
             encodedCutsPerParent[parentCounter] = it.first;
             parentCounter++;
@@ -250,9 +264,9 @@ void bin_splitter::split(
             break;
         }
 
-        std::cout << "scores per parent: " << scoresPerParent << std::endl;
+        // std::cout << "scores per parent: " << scoresPerParent << std::endl;
         long double overallMaximum = scoresPerParent.maxCoeff(&maxCol);
-        std::cout << "best index is: " << maxCol << std::endl;
+        // std::cout << "best index is: " << maxCol << std::endl;
         int chosenObs = obsAndEdgeIndexPerParent[maxCol].second;
         int chosenEdgeIndex = obsAndEdgeIndexPerParent[maxCol].first;
         std::string encodedCut = encodedCutsPerParent[maxCol];
@@ -260,8 +274,8 @@ void bin_splitter::split(
         std::vector<std::vector<int>> b1;
         std::vector<std::vector<int>> b2;
         double cut = possibleEdges.coeff(chosenEdgeIndex, chosenObs);
-        std::cout << "Picked cut: " << chosenObs << " > " << cut << std::endl;
-        std::cout << "with a score of " << overallMaximum << std::endl;
+        // std::cout << "Picked cut: " << chosenObs << " > " << cut << std::endl;
+        // std::cout << "with a score of " << overallMaximum << std::endl;
 
         int h = 0;
         for(std::vector<int> hypothesisIndices : (this->bins)[encodedCut]){
@@ -281,6 +295,18 @@ void bin_splitter::split(
         //replace it with this!
 
         (this->bins).erase(encodedCut);
+
+        std::vector<std::string> deletionList;
+        for(auto it : this->previousCalculations){ 
+            //all calculations with this parent are now moot
+            if(it.first.find(encodedCut) != std::string::npos){
+                // (this->previousCalculations).erase(it.first);
+                deletionList.push_back(it.first);
+            }
+        }
+        for(std::string& key : deletionList){
+                (this->previousCalculations).erase(key);
+        }
         (this->bins).emplace(
             encodedCut + ";" + std::to_string(chosenObs) + ">" + std::to_string(cut),
             b1
@@ -289,9 +315,12 @@ void bin_splitter::split(
             encodedCut + ";" + std::to_string(chosenObs) + "<=" + std::to_string(cut),
             b2
         );
-        std::cout << std::endl << "Done with bin " << nBins << std::endl << std::endl;
+        // std::cout << std::endl << "Done with bin " << nBins << std::endl << std::endl;
         nBins++;
     }
+    std::cerr << "nBins=" << nBins << "/" << nBinsDesired << "\r";
+    std::cerr.flush();
+    std::cerr << std::endl;
     
     std::ofstream cutsFile;
     cutsFile.open("cuts.log");

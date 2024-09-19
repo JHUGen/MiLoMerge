@@ -33,6 +33,7 @@ class bin_splitter{
         std::vector<int> observablesList;
         std::vector<std::pair<double,double>> maximaAndMinima;
         std::unordered_map<std::string, std::vector<std::vector<int>>> bins;
+        std::unordered_map<std::string, double> previousCalculations;
         
         void initialize(
             std::vector<std::vector<std::vector<double>>>& data,
