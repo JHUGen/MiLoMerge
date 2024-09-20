@@ -70,7 +70,7 @@ void bin_splitter::initialize(
     this->hypoList = std::vector<int>(this->nHypotheses);
     this->observablesList = std::vector<int>(this->nObservables);
     this->encodedFinalStrings = std::vector<std::string>();
-    this->finalBinCounts = std::vector<int>();
+    this->finalBinCounts = std::vector<std::vector<int>>();
     this->previousCalculations = std::unordered_map<std::string, double>();
     
     //matrices of size (this->nPoints, this->nObservables + 1)
@@ -134,10 +134,6 @@ void bin_splitter::initialize(
     }
 
     this->bins.emplace("", starting_bin);
-}
-
-Eigen::MatrixXd bin_splitter::getData(size_t h){
-    return (this->data)[h];
 }
 
 void bin_splitter::score(
@@ -326,7 +322,10 @@ void bin_splitter::split(
     cutsFile.open("cuts.log");
     for(auto it: this->bins){
         this->encodedFinalStrings.push_back(it.first);
-        this->finalBinCounts.push_back(it.second.size());
+        for(int h = 0; h < this->nHypotheses; h++){
+            this->finalBinCounts.push_back(std::vector<int>());
+            this->finalBinCounts[h].push_back(it.second[h].size());
+        }
         cutsFile << it.first << "\n";
     }
     cutsFile.close();
@@ -335,6 +334,8 @@ void bin_splitter::split(
 void bin_splitter::reset(){
     this->bins.clear();
     this->encodedFinalStrings.clear();
+    this->finalBinCounts.clear();
+    this->previousCalculations.clear();
     std::vector<std::vector<int>> starting_bin;
 
     for (int h = 0; h < this->nHypotheses; h++){
@@ -346,6 +347,41 @@ void bin_splitter::reset(){
     this->bins.emplace("", starting_bin);
 }
 
+Eigen::MatrixXd bin_splitter::getData(size_t h){
+    if(h > this->nHypotheses){
+        throw std::invalid_argument("Hypothesis Number Requested Out Of Bounds!");
+    }
+    return (this->data)[h];
+}
+
+std::vector<std::vector<int>> bin_splitter::getFinalBinCounts(){
+    return (this->finalBinCounts);
+}
+
+std::vector<std::string> bin_splitter::getEncodedStrings(){
+    return (this->encodedFinalStrings);
+}
+
+std::vector<std::pair<double,double>> bin_splitter::getMinimaAndMaxima(){
+    return (this->maximaAndMinima);
+}
+
+std::vector<double> bin_splitter::getMinima(){
+    std::vector<double> minima(this->nObservables);
+    for(int i = 0; i < this->nObservables; i++){
+        minima.push_back(this->maximaAndMinima[i].first);
+    }
+    return minima;
+}
+
+std::vector<double> bin_splitter::getMaxima(){
+    std::vector<double> maxima(this->nObservables);
+    for(int i = 0; i < this->nObservables; i++){
+        maxima.push_back(this->maximaAndMinima[i].second);
+    }
+    return maxima;
+}
+
 bin_splitter::~bin_splitter() noexcept{
     this->bins.clear();
     this->encodedFinalStrings.clear();
@@ -355,4 +391,5 @@ bin_splitter::~bin_splitter() noexcept{
     this->observablesList.clear();
     this->maximaAndMinima.clear();
     this->bins.clear();
+    this->previousCalculations.clear();
 }

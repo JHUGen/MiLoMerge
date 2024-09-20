@@ -28,7 +28,7 @@ class bin_splitter{
         size_t nPoints;
         size_t nHypotheses;
         std::vector<std::string> encodedFinalStrings;
-        std::vector<int> finalBinCounts;
+        std::vector<std::vector<int>> finalBinCounts;
         std::vector<int> hypoList;
         std::vector<int> observablesList;
         std::vector<std::pair<double,double>> maximaAndMinima;
@@ -63,7 +63,11 @@ class bin_splitter{
         );
 
         Eigen::MatrixXd getData(size_t h);
-
+        std::vector<std::vector<int>> getFinalBinCounts();
+        std::vector<std::string> getEncodedStrings();
+        std::vector<std::pair<double,double>> getMinimaAndMaxima();
+        std::vector<double> getMinima();
+        std::vector<double> getMaxima();
 
         void split(
             size_t nBinsDesired,
