@@ -16,7 +16,7 @@ base: $(SRC)/bin_splitter.cpp
 	$(LINKER) $(SRC)/bin_splitter.cpp $(CPPFLAGS) $(INC) -c -o $(OBJDIR)/bin_splitter.o
 
 test_root: $(TESTDIR)/test_split.cpp base
-	$(LINKER) $(TESTDIR)/test_split.cpp $(OBJDIR)/bin_splitter.o $(CPPFLAGS) $(INC) -o $(PWD)/test_split
+	$(LINKER) $(TESTDIR)/test_split.cpp $(OBJDIR)/bin_splitter.o $(CPPFLAGS) $(INC) -o $(PWD)/test_split $(ROOTFLAGS)
 
 test_local: $(TESTDIR)/test_split_local.cpp base
 	$(LINKER) $(TESTDIR)/test_split_local.cpp $(OBJDIR)/bin_splitter.o $(CPPFLAGS) $(INC) -o $(PWD)/test_split

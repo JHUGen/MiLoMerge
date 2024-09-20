@@ -11,7 +11,7 @@ int main(int argc, char const *argv[])
     std::vector<std::vector<double>> data(5);
     std::vector<std::vector<double>> weight(2);
 
-    TFile* dataFile = TFile::Open("../test_data/all_reweighted_2e2mu.root");
+    TFile* dataFile = TFile::Open("../../test_data/all_reweighted_2e2mu.root");
     TTreeReader myReader("eventTree", dataFile);
 
     TTreeReaderValue<float> costheta1d(myReader, "costheta1d");
@@ -24,7 +24,7 @@ int main(int argc, char const *argv[])
     TTreeReaderValue<double> h2(myReader, "p_Gen_GG_SIG_ghg2_1_ghz4_1_JHUGen");
 
 
-    size_t N = 1000000;
+    size_t N = 10000000;
     size_t n = 0;
     double h1Sum=0;
     double h2Sum=0;
@@ -45,7 +45,7 @@ int main(int argc, char const *argv[])
 
     // std::cout << "hSums " << h1Sum << " " << h2Sum << std::endl;
 
-    for(int i = 0; i < N; i++){
+    for(int i = 0; i < n; i++){
         weight[0][i] /= h1Sum;
         weight[1][i] /= h2Sum; //norm to 1
     }
@@ -64,10 +64,17 @@ int main(int argc, char const *argv[])
    // std::cout << b.getData(1) << std::endl << std::endl;
 
     b.split(
+        100,
         10,
-        20,
-        1
+        10000,
+        false
     );
+
+    std::vector<std::string> names = {"MZ1", "MZ2", "c1", "c2", "Phi"};
+
+    for(auto it : b.decodeCuts(names)){
+        std::cout << it << std::endl;
+    }
 
     return 0;
 }
