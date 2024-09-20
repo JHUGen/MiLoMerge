@@ -24,11 +24,11 @@ typedef Eigen::Array<long double, Eigen::Dynamic, 1> ArrayXld;
 class bin_splitter{
     private:
         std::vector<Eigen::ArrayXXd> data;
-        size_t nObservables;
-        size_t nPoints;
-        size_t nHypotheses;
+        int nObservables;
+        int nPoints;
+        int nHypotheses;
         std::vector<std::string> encodedFinalStrings;
-        std::vector<std::vector<int>> finalBinCounts;
+        std::vector<std::vector<double>> finalBinCounts;
         std::vector<int> hypoList;
         std::vector<int> observablesList;
         std::vector<std::pair<double,double>> maximaAndMinima;
@@ -47,6 +47,8 @@ class bin_splitter{
             bool compareToFirstOnly
         );
 
+        std::string decode(std::vector<std::string>& names, std::string& leafNode);
+
     public:
         bin_splitter(
             std::vector<std::vector<std::vector<double>>>& data
@@ -62,18 +64,24 @@ class bin_splitter{
             std::vector<std::vector<double>>& weights
         );
 
-        Eigen::MatrixXd getData(size_t h);
-        std::vector<std::vector<int>> getFinalBinCounts();
-        std::vector<std::string> getEncodedStrings();
-        std::vector<std::pair<double,double>> getMinimaAndMaxima();
-        std::vector<double> getMinima();
-        std::vector<double> getMaxima();
+        Eigen::MatrixXd getData(int h) const;
+        std::vector<std::vector<double>> getFinalBinCounts() const;
+        std::vector<std::string> getEncodedStrings() const;
+        std::vector<std::pair<double,double>> getMinimaAndMaxima() const;
+        std::vector<double> getMinima() const;
+        std::vector<double> getMaxima() const;
+        int getNObservables() const;
+        int getNPoints() const;
+        int getNHypotheses() const;
 
         void split(
             size_t nBinsDesired,
             size_t granularity,
-            double statLimit
+            double statLimit,
+            bool log=true
         );
+
+        std::vector<std::string> decodeCuts(std::vector<std::string>& names);
 
         void reset();
 

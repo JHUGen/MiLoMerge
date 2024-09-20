@@ -70,7 +70,7 @@ void bin_splitter::initialize(
     this->hypoList = std::vector<int>(this->nHypotheses);
     this->observablesList = std::vector<int>(this->nObservables);
     this->encodedFinalStrings = std::vector<std::string>();
-    this->finalBinCounts = std::vector<std::vector<int>>();
+    this->finalBinCounts = std::vector<std::vector<double>>(this->nHypotheses);
     this->previousCalculations = std::unordered_map<std::string, double>();
     
     //matrices of size (this->nPoints, this->nObservables + 1)
@@ -151,6 +151,7 @@ void bin_splitter::score(
     }
 
     long double t1,t2,t3,t4 = 0;
+    #pragma omp parallel for reduction(+:metricVal)
     for(int h : hypothesisTopLoop){
         Eigen::VectorXd hVec = ((this->data)[h]).col(this->nObservables);
         //maps to the weight for that hypo
@@ -173,8 +174,14 @@ void bin_splitter::score(
 void bin_splitter::split(
     size_t nBinsDesired,
     size_t granularity,
-    double statLimit
+    double statLimit,
+    bool log
 ){
+    std::ofstream logFile;
+    if(log){
+        logFile.open("Splitlog.log");
+    }
+
     Eigen::ArrayXXd possibleEdges = Eigen::ArrayXXd(granularity, this->nObservables);
     ArrayXXld scores = ArrayXXld(granularity, this->nObservables);
     Eigen::Index maxRow, maxCol;
@@ -200,8 +207,10 @@ void bin_splitter::split(
         size_t parentCounter = 0;
         for(auto it : this->bins){ //all the possible leaf nodes
             scores.setZero(); //reset scores for this parent
+
+            #pragma omp parallel for collapse(2)
             for(int obs = 0; obs < this->nObservables; obs++){
-                for(int edgeIndex = 0; edgeIndex < granularity; edgeIndex++){
+                for(size_t edgeIndex = 0; edgeIndex < granularity; edgeIndex++){
                     double cut = possibleEdges.coeff(edgeIndex, obs);
 
                     //Just use the ">" cut to show that it's already been calculated
@@ -214,11 +223,12 @@ void bin_splitter::split(
 
                     std::vector<std::vector<int>> b1;
                     std::vector<std::vector<int>> b2;
-                    long double score = 0;
 
-                    // std::cout << "Trying cut of " << obs << " > " << cut << std::endl;
-                    // std::cout << "At index: (" << edgeIndex << "," << obs << ")" << std::endl;
-                    // std::cout << "On possible parent " << parentCounter << ": " << it.first << std::endl;
+                    if(log){
+                        logFile << "Trying cut of " << obs << " > " << cut << std::endl;
+                        logFile << "At index: (" << edgeIndex << "," << obs << ")" << std::endl;
+                        logFile << "On possible parent " << parentCounter << ": " << it.first << std::endl;
+                    }
                     size_t h = 0;
                     bool breakLoop = false;
                     for(std::vector<int> hypothesisIndices : it.second){
@@ -234,7 +244,7 @@ void bin_splitter::split(
                                 b2[h].push_back(index);
                             }
                         }
-                        if(b1[h].size() < statLimit | b2[h].size() < statLimit){
+                        if((b1[h].size() < statLimit) | (b2[h].size() < statLimit)){
                             breakLoop = true;
                             continue;
                         }
@@ -245,24 +255,34 @@ void bin_splitter::split(
                     }
                     this->score(b1, b2, scores(edgeIndex, obs), false);
                     this->previousCalculations[encoding] = scores.coeff(edgeIndex, obs);
-                    // std::cout << "score of: " << scores.coeff(edgeIndex, obs) << std::endl;
+                    if(log){
+                        logFile << "score of: " << scores.coeff(edgeIndex, obs) << std::endl;
+                    }
                 }
             }
             scoresPerParent(parentCounter) = scores.maxCoeff(&maxRow, &maxCol);
-            // std::cout << "picked best score at index: " << maxRow << "," << maxCol << std::endl;
+            if(log){
+                logFile << "picked best score at index: " << maxRow << "," << maxCol << std::endl;
+            }
             obsAndEdgeIndexPerParent[parentCounter] = std::make_pair(maxRow, maxCol);
             encodedCutsPerParent[parentCounter] = it.first;
             parentCounter++;
         }
-        if(!scoresPerParent.all()){
-            std::cerr << "No more cuts can be applied." << std::endl;
+        if(!(scoresPerParent.all())){
+            if(log){
+                logFile << std::endl << "No more cuts can be applied." << std::endl;
+                logFile << "Ending prematurely at " << nBins << " bins." << std::endl;
+            }
+            std::cerr << std::endl << "No more cuts can be applied." << std::endl;
             std::cerr << "Ending prematurely at " << nBins << " bins." << std::endl;
             break;
         }
 
-        // std::cout << "scores per parent: " << scoresPerParent << std::endl;
         long double overallMaximum = scoresPerParent.maxCoeff(&maxCol);
-        // std::cout << "best index is: " << maxCol << std::endl;
+        if(log){
+            logFile << "scores per parent: " << scoresPerParent << std::endl;
+            logFile << "best index is: " << maxCol << std::endl;
+        }
         int chosenObs = obsAndEdgeIndexPerParent[maxCol].second;
         int chosenEdgeIndex = obsAndEdgeIndexPerParent[maxCol].first;
         std::string encodedCut = encodedCutsPerParent[maxCol];
@@ -270,8 +290,10 @@ void bin_splitter::split(
         std::vector<std::vector<int>> b1;
         std::vector<std::vector<int>> b2;
         double cut = possibleEdges.coeff(chosenEdgeIndex, chosenObs);
-        // std::cout << "Picked cut: " << chosenObs << " > " << cut << std::endl;
-        // std::cout << "with a score of " << overallMaximum << std::endl;
+        if(log){
+            logFile << "Picked cut: " << chosenObs << " > " << cut << std::endl;
+            logFile << "with a score of " << overallMaximum << std::endl;
+        }
 
         int h = 0;
         for(std::vector<int> hypothesisIndices : (this->bins)[encodedCut]){
@@ -296,22 +318,25 @@ void bin_splitter::split(
         for(auto it : this->previousCalculations){ 
             //all calculations with this parent are now moot
             if(it.first.find(encodedCut) != std::string::npos){
-                // (this->previousCalculations).erase(it.first);
                 deletionList.push_back(it.first);
             }
         }
+
         for(std::string& key : deletionList){
                 (this->previousCalculations).erase(key);
         }
+
         (this->bins).emplace(
-            encodedCut + ";" + std::to_string(chosenObs) + ">" + std::to_string(cut),
+            encodedCut + std::to_string(chosenObs) + ">" + std::to_string(cut) + ";",
             b1
         );
         (this->bins).emplace(
-            encodedCut + ";" + std::to_string(chosenObs) + "<=" + std::to_string(cut),
+            encodedCut + std::to_string(chosenObs) + "<=" + std::to_string(cut) + ";",
             b2
         );
-        // std::cout << std::endl << "Done with bin " << nBins << std::endl << std::endl;
+        if(log){
+            logFile << std::endl << "Done with bin " << nBins << std::endl << std::endl;
+        }
         nBins++;
     }
     std::cerr << "nBins=" << nBins << "/" << nBinsDesired << "\r";
@@ -323,13 +348,44 @@ void bin_splitter::split(
     for(auto it: this->bins){
         this->encodedFinalStrings.push_back(it.first);
         for(int h = 0; h < this->nHypotheses; h++){
-            this->finalBinCounts.push_back(std::vector<int>());
-            this->finalBinCounts[h].push_back(it.second[h].size());
+            this->finalBinCounts[h].push_back(
+                ((((this->data)[h]).col(this->nObservables))(it.second[h])).sum()
+            );
         }
         cutsFile << it.first << "\n";
     }
     cutsFile.close();
+    if(log){
+        logFile.close();
+    }
 }
+
+std::string bin_splitter::decode(std::vector<std::string>& names, std::string& leafNode){
+    std::string decoded_cut = "(";
+    bool isObservableIndex=true;
+    for(auto c : leafNode){
+        if(isObservableIndex){
+            decoded_cut += names[(int)c - (int)'0'];
+            isObservableIndex = false;
+            continue;
+        } else if(c == ';'){
+            decoded_cut += ") & (";
+            isObservableIndex = true;
+            continue;
+        }
+        decoded_cut.push_back(c);
+    }
+    return decoded_cut.substr(0, decoded_cut.size() - 4);
+}
+
+std::vector<std::string> bin_splitter::decodeCuts(std::vector<std::string>& names){
+    std::vector<std::string> decoded;
+    for(std::string& it : this->encodedFinalStrings){
+        decoded.push_back(decode(names, it));
+    }
+    return decoded;
+}
+
 
 void bin_splitter::reset(){
     this->bins.clear();
@@ -347,26 +403,26 @@ void bin_splitter::reset(){
     this->bins.emplace("", starting_bin);
 }
 
-Eigen::MatrixXd bin_splitter::getData(size_t h){
+Eigen::MatrixXd bin_splitter::getData(int h) const{
     if(h > this->nHypotheses){
         throw std::invalid_argument("Hypothesis Number Requested Out Of Bounds!");
     }
     return (this->data)[h];
 }
 
-std::vector<std::vector<int>> bin_splitter::getFinalBinCounts(){
+std::vector<std::vector<double>> bin_splitter::getFinalBinCounts() const{
     return (this->finalBinCounts);
 }
 
-std::vector<std::string> bin_splitter::getEncodedStrings(){
+std::vector<std::string> bin_splitter::getEncodedStrings() const{
     return (this->encodedFinalStrings);
 }
 
-std::vector<std::pair<double,double>> bin_splitter::getMinimaAndMaxima(){
+std::vector<std::pair<double,double>> bin_splitter::getMinimaAndMaxima() const{
     return (this->maximaAndMinima);
 }
 
-std::vector<double> bin_splitter::getMinima(){
+std::vector<double> bin_splitter::getMinima() const{
     std::vector<double> minima(this->nObservables);
     for(int i = 0; i < this->nObservables; i++){
         minima.push_back(this->maximaAndMinima[i].first);
@@ -374,12 +430,22 @@ std::vector<double> bin_splitter::getMinima(){
     return minima;
 }
 
-std::vector<double> bin_splitter::getMaxima(){
+std::vector<double> bin_splitter::getMaxima() const{
     std::vector<double> maxima(this->nObservables);
     for(int i = 0; i < this->nObservables; i++){
         maxima.push_back(this->maximaAndMinima[i].second);
     }
     return maxima;
+}
+
+int bin_splitter::getNObservables() const{
+    return this->nObservables;
+}
+int bin_splitter::getNPoints() const{
+    return this->nPoints;
+}
+int bin_splitter::getNHypotheses() const{
+    return this->nHypotheses;
 }
 
 bin_splitter::~bin_splitter() noexcept{
