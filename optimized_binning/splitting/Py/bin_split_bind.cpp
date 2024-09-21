@@ -15,7 +15,7 @@ PYBIND11_MODULE(bin_splitter, m){
         .def(py::init<std::vector<std::vector<std::vector<double>>>&, std::vector<std::vector<double>>&>())
         .def(
             "split", &bin_splitter::split,
-            py::arg("n_bins_desired"), py::arg("granularity"), py::arg("stat_limi"), py::arg("log")=true
+            py::arg("n_bins_desired"), py::arg("granularity"), py::arg("stat_limit"), py::arg("log")=true
         )
         .def_property_readonly("data", &bin_splitter::getData)
         .def_property_readonly("finalBinCounts", &bin_splitter::getFinalBinCounts)
@@ -35,4 +35,5 @@ PYBIND11_MODULE(bin_splitter, m){
                     + " x " + std::to_string(b.getNPoints());
             }
         );
+    m.def("decode", &bin_splitter::decode);
 }

@@ -24,7 +24,7 @@ int main(int argc, char const *argv[])
     TTreeReaderValue<double> h2(myReader, "p_Gen_GG_SIG_ghg2_1_ghz4_1_JHUGen");
 
 
-    size_t N = 10000000;
+    size_t N = 20000000;
     size_t n = 0;
     double h1Sum=0;
     double h2Sum=0;
@@ -64,17 +64,17 @@ int main(int argc, char const *argv[])
    // std::cout << b.getData(1) << std::endl << std::endl;
 
     b.split(
+        -1,
         100,
-        10,
         10000,
         false
     );
 
-    std::vector<std::string> names = {"MZ1", "MZ2", "c1", "c2", "Phi"};
+    // std::vector<std::string> names = {"MZ1", "MZ2", "c1", "c2", "Phi"};
 
-    for(auto it : b.decodeCuts(names)){
-        std::cout << it << std::endl;
-    }
+    // for(auto it : b.decodeCuts(names)){
+    //     std::cout << it << std::endl;
+    // }
 
     return 0;
 }

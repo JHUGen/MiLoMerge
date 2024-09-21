@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 #include <limits>
+#include <climits>
 
 bin_splitter::bin_splitter(
     std::vector<std::vector<std::vector<double>>>& data,
@@ -151,7 +152,7 @@ void bin_splitter::score(
     }
 
     long double t1,t2,t3,t4 = 0;
-    #pragma omp parallel for reduction(+:metricVal)
+    // #pragma omp parallel for reduction(+:metricVal)
     for(int h : hypothesisTopLoop){
         Eigen::VectorXd hVec = ((this->data)[h]).col(this->nObservables);
         //maps to the weight for that hypo
@@ -172,11 +173,14 @@ void bin_splitter::score(
 }
 
 void bin_splitter::split(
-    size_t nBinsDesired,
+    int nBinsDesired,
     size_t granularity,
     double statLimit,
     bool log
 ){
+    if(nBinsDesired < 1){
+        nBinsDesired = INT_MAX;
+    }
     std::ofstream logFile;
     if(log){
         logFile.open("Splitlog.log");
@@ -193,7 +197,7 @@ void bin_splitter::split(
             this->maximaAndMinima[i].second
         )(Eigen::seq(1, granularity)); //utilizing the edges is useless!
     }
-    size_t nBins = 1;
+    int nBins = 1;
 
     while (nBins < nBinsDesired){
         std::cerr << "nBins=" << nBins << "/" << nBinsDesired << "\r";
@@ -251,6 +255,11 @@ void bin_splitter::split(
                         h++;
                     }
                     if(breakLoop){
+                        if(log){
+                            logFile << "cut of: " << obs << " > " << cut;
+                            logFile << " does not have sufficient statistics" << std::endl;
+                        }
+                        this->previousCalculations[encoding] = 0;
                         continue;
                     }
                     this->score(b1, b2, scores(edgeIndex, obs), false);

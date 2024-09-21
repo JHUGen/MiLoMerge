@@ -47,8 +47,6 @@ class bin_splitter{
             bool compareToFirstOnly
         );
 
-        std::string decode(std::vector<std::string>& names, std::string& leafNode);
-
     public:
         bin_splitter(
             std::vector<std::vector<std::vector<double>>>& data
@@ -75,12 +73,13 @@ class bin_splitter{
         int getNHypotheses() const;
 
         void split(
-            size_t nBinsDesired,
+            int nBinsDesired,
             size_t granularity,
             double statLimit,
             bool log=true
         );
 
+        static std::string decode(std::vector<std::string>& names, std::string& leafNode);
         std::vector<std::string> decodeCuts(std::vector<std::string>& names);
 
         void reset();
