@@ -83,6 +83,7 @@ def place_event_nonlocal(N, *observable, file_prefix="", verbose=False):
 
     observable = np.array(observable)
 
+    # print(physical_bins.shape, observable)
     if len(physical_bins.shape) > 1 and len(observable) > 1:
         n_observables = physical_bins.shape[0]
         n_physical_bins = physical_bins.shape[1]
@@ -116,7 +117,7 @@ def place_event_nonlocal(N, *observable, file_prefix="", verbose=False):
         unrolled_index = np.searchsorted(physical_bins, observable) - 1
 
     try:
-        mapped_index = bin_mapping[unrolled_index][0]
+        mapped_index = bin_mapping[unrolled_index]
     except IndexError as e:
         raise ValueError(f"{observable} is outside of the provided phase space!") from e
 
@@ -139,16 +140,16 @@ def place_array_nonlocal(N, observables, file_prefix="", verbose=False):
         n_datapoints, n_observables = observables_stacked.shape
         nonzero_rolled = np.zeros((n_datapoints, n_observables))
         for i in range(n_observables):
-            nonzero_rolled[:, i] = np.searchsorted(physical_bins[i], observables_stacked[:, i])
+            nonzero_rolled[:, i] = np.searchsorted(physical_bins[i], observables_stacked[:, i]) - 1
         if verbose:
             print("Original indices")
             print(nonzero_rolled)
 
-        unrolled_index = (np.power(n_observables - 1, np.arange(n_observables - 1,-1,-1, np.int16))*nonzero_rolled).sum(axis=1)
-
+        unrolled_index = (np.power(n_physical_bins - 1, np.arange(n_observables - 1,-1,-1, np.int16))*nonzero_rolled).sum(axis=1)
+        unrolled_index = unrolled_index.astype(int)
     else:
         if observables_stacked.ndim != physical_bins.ndim:
-            raise ValueError(f"Number of observables {1} != Number of bin dimensions {1}")
+            raise ValueError(f"Number of observables {observables_stacked.ndim} != Number of bin dimensions {physical_bins.ndim}")
         n_physical_bins = len(physical_bins)
         nonzero_rolled = np.searchsorted(physical_bins, observables_stacked) - 1
         unrolled_index = nonzero_rolled
