@@ -87,7 +87,7 @@ class Merger(ABC):
         self.comp_to_first = comp_to_first
 
         self.counts = np.vstack(counts).astype(np.float64)
-        self.counts /= np.abs(self.counts).sum(axis=1)[:, None]
+        # self.counts /= np.abs(self.counts).sum(axis=1)[:, None]
         self.counts[~np.isfinite(self.counts)] = 0
 
         self.bin_edges = np.array(bin_edges, dtype=np.float64)
