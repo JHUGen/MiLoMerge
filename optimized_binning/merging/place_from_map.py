@@ -43,7 +43,7 @@ def load_file_nonlocal(fname_tracker, fname_bins, key):
     f = h5py.File(fname_tracker, 'r')
     bin_mapping = f[key][:]
 
-    physical_bins = np.load(fname_bins)
+    physical_bins = np.load(fname_bins, allow_pickle=True)
 
     return bin_mapping, physical_bins
 
@@ -84,6 +84,7 @@ def place_event_nonlocal(N, *observable, file_prefix="", verbose=False):
     observable = np.array(observable)
 
     # print(physical_bins.shape, observable)
+    subarray_lengths = [len(b) for b in physical_bins]
     if len(physical_bins.shape) > 1 and len(observable) > 1:
         n_observables = physical_bins.shape[0]
         n_physical_bins = physical_bins.shape[1]
@@ -93,7 +94,7 @@ def place_event_nonlocal(N, *observable, file_prefix="", verbose=False):
             nonzero_rolled[i] = np.searchsorted(physical_bins[i], observable[i]) - 1
 
         if np.any(nonzero_rolled < 0) or np.any(nonzero_rolled > n_physical_bins - 1):
-            raise ValueError(f"{observable} is outside of the provided phase space!")
+            raise ValueError(f"observables are outside of the provided phase space!")
 
         if verbose:
             print('original index of:', nonzero_rolled)
@@ -108,14 +109,41 @@ def place_event_nonlocal(N, *observable, file_prefix="", verbose=False):
                 )*nonzero_rolled
             ).sum()
 
+    elif any([subarray_lengths[0] != b for b in subarray_lengths]) and len(subarray_lengths) == len(observable):
+        n_observables = len(observable)
+        n_physical_bins = np.array(subarray_lengths) #this is now per dimension
+
+        nonzero_rolled = np.zeros(n_observables, dtype=np.uint8)
+        for i in np.arange(n_observables):
+            nonzero_rolled[i] = np.searchsorted(physical_bins[i], observable[i]) - 1
+            if nonzero_rolled[i] < 0 or nonzero_rolled[i] >= n_physical_bins[i]:
+                raise ValueError(f"Observable of index {i} is outside of the provided phase space!")
+            
+            if verbose:
+                print('original index of:', nonzero_rolled[i])
+                print('This places your point in the range:')
+                print('[', physical_bins[i][nonzero_rolled[i]], ',', physical_bins[i][int(nonzero_rolled[i]+1)], ']')
+        
+        unrolled_index = 0
+        multiplier = 1
+        for i in reversed(range(len(n_physical_bins))):
+            unrolled_index += nonzero_rolled[i]*multiplier
+            if i > 0:
+                multiplier *= subarray_lengths[i] - 1
+
     elif len(physical_bins.shape) > 1 or len(observable) > 1:
-        raise ValueError("Shapes are incompatible")
+        raise ValueError(
+            f"Shapes are incompatible\n"
+            f" shape of bins is {len(physical_bins.shape)} and"
+            f" length of observables is {len(observable)}"
+        )
     else:
         if len(observable) > 1:
             raise ValueError
 
         unrolled_index = np.searchsorted(physical_bins, observable) - 1
 
+    print(bin_mapping)
     try:
         mapped_index = bin_mapping[unrolled_index]
     except IndexError as e:
@@ -130,6 +158,7 @@ def place_array_nonlocal(N, observables, file_prefix="", verbose=False):
     bin_mapping, physical_bins = load_file_nonlocal(fname_tracker, fname_bins, str(N))
     observables_stacked = np.array(observables)
 
+    subarray_lengths = np.array([len(b) for b in physical_bins])
     if physical_bins.ndim > 1:
         if len(observables_stacked[0]) != len(physical_bins):
             raise ValueError(
@@ -138,7 +167,7 @@ def place_array_nonlocal(N, observables, file_prefix="", verbose=False):
         n_physical_bins = physical_bins.shape[1]
         
         n_datapoints, n_observables = observables_stacked.shape
-        nonzero_rolled = np.zeros((n_datapoints, n_observables))
+        nonzero_rolled = np.zeros((n_datapoints, n_observables), dtype=np.uint16)
         for i in range(n_observables):
             nonzero_rolled[:, i] = np.searchsorted(physical_bins[i], observables_stacked[:, i]) - 1
         if verbose:
@@ -147,6 +176,26 @@ def place_array_nonlocal(N, observables, file_prefix="", verbose=False):
 
         unrolled_index = (np.power(n_physical_bins - 1, np.arange(n_observables - 1,-1,-1, np.int16))*nonzero_rolled).sum(axis=1)
         unrolled_index = unrolled_index.astype(int)
+    elif np.any(subarray_lengths != subarray_lengths[0]):
+        if len(observables_stacked[0]) != len(physical_bins):
+            raise ValueError(
+                f"Number of observables {len(observables_stacked[0])} != Number of bin dimensions {len(physical_bins)}"
+            )
+        n_physical_bins = subarray_lengths
+        n_datapoints, n_observables = observables_stacked.shape
+        nonzero_rolled = np.zeros((n_datapoints, n_observables), dtype=np.uint16)
+        for i in range(n_observables):
+            nonzero_rolled[:,i] = np.searchsorted(physical_bins[i], observables_stacked[:, i]) - 1
+        if verbose:
+            print("Original indices")
+            print(nonzero_rolled)
+        
+        unrolled_index = np.zeros(n_datapoints, dtype=np.uint16)
+        multiplier = 1
+        for i in reversed(range(len(n_physical_bins))):
+            unrolled_index += nonzero_rolled[:,i]*multiplier
+            if i > 0:
+                multiplier *= subarray_lengths[i] - 1
     else:
         if observables_stacked.ndim != physical_bins.ndim:
             raise ValueError(f"Number of observables {observables_stacked.ndim} != Number of bin dimensions {physical_bins.ndim}")

@@ -488,6 +488,7 @@ class MergerNonlocal(Merger):
         """
 
         unrolled_counts = list(map(np.ndarray.ravel, map(np.array, counts)))
+
         unrolled_bins = np.arange(len(unrolled_counts[0]) + 1)
 
         super().__init__(
@@ -498,7 +499,7 @@ class MergerNonlocal(Merger):
 
         self._merger_type = "Non-local"
 
-        self.physical_bins = np.array(bin_edges)
+        self.physical_bins = np.array(bin_edges, dtype=object)
 
         if len(self.physical_bins.shape) > 1:
             self.n_observables = bin_edges.shape[0]
@@ -529,7 +530,7 @@ class MergerNonlocal(Merger):
                 )
 
                 np.save(f".{file_prefix}_physical_bins.npy", self.physical_bins,
-                        fix_imports=False, allow_pickle=False)
+                        fix_imports=False, allow_pickle=True)
         else:
             self.__cur_iteration_tracker = {}
             self.tracker = None
