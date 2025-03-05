@@ -89,7 +89,7 @@ def place_event_nonlocal(N, *observable, file_prefix="", verbose=False):
         n_observables = physical_bins.shape[0]
         n_physical_bins = physical_bins.shape[1]
 
-        nonzero_rolled = np.zeros(n_observables, dtype=np.uint16)
+        nonzero_rolled = np.zeros(n_observables, dtype=np.uint64)
         for i in np.arange(n_observables):
             nonzero_rolled[i] = np.searchsorted(physical_bins[i], observable[i]) - 1
 
@@ -113,7 +113,7 @@ def place_event_nonlocal(N, *observable, file_prefix="", verbose=False):
         n_observables = len(observable)
         n_physical_bins = np.array(subarray_lengths) #this is now per dimension
 
-        nonzero_rolled = np.zeros(n_observables, dtype=np.uint8)
+        nonzero_rolled = np.zeros(n_observables, dtype=np.uint64)
         for i in np.arange(n_observables):
             nonzero_rolled[i] = np.searchsorted(physical_bins[i], observable[i]) - 1
             if nonzero_rolled[i] < 0 or nonzero_rolled[i] >= n_physical_bins[i]:
@@ -143,7 +143,7 @@ def place_event_nonlocal(N, *observable, file_prefix="", verbose=False):
 
         unrolled_index = np.searchsorted(physical_bins, observable) - 1
 
-    print(bin_mapping)
+    # print(bin_mapping)
     try:
         mapped_index = bin_mapping[unrolled_index]
     except IndexError as e:
@@ -167,7 +167,7 @@ def place_array_nonlocal(N, observables, file_prefix="", verbose=False):
         n_physical_bins = physical_bins.shape[1]
         
         n_datapoints, n_observables = observables_stacked.shape
-        nonzero_rolled = np.zeros((n_datapoints, n_observables), dtype=np.uint16)
+        nonzero_rolled = np.zeros((n_datapoints, n_observables), dtype=np.uint64)
         for i in range(n_observables):
             nonzero_rolled[:, i] = np.searchsorted(physical_bins[i], observables_stacked[:, i]) - 1
         if verbose:
@@ -183,14 +183,14 @@ def place_array_nonlocal(N, observables, file_prefix="", verbose=False):
             )
         n_physical_bins = subarray_lengths
         n_datapoints, n_observables = observables_stacked.shape
-        nonzero_rolled = np.zeros((n_datapoints, n_observables), dtype=np.uint16)
+        nonzero_rolled = np.zeros((n_datapoints, n_observables), dtype=np.uint64)
         for i in range(n_observables):
             nonzero_rolled[:,i] = np.searchsorted(physical_bins[i], observables_stacked[:, i]) - 1
         if verbose:
             print("Original indices")
             print(nonzero_rolled)
         
-        unrolled_index = np.zeros(n_datapoints, dtype=np.uint16)
+        unrolled_index = np.zeros(n_datapoints, dtype=np.uint64)
         multiplier = 1
         for i in reversed(range(len(n_physical_bins))):
             unrolled_index += nonzero_rolled[:,i]*multiplier
