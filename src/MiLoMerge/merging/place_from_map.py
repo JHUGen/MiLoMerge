@@ -146,7 +146,7 @@ def place_event_nonlocal(N, *observable, file_prefix, verbose=False):
     return mapped_index
 
 
-def place_array_nonlocal(N, observables, file_prefix, verbose=False):
+def place_array_nonlocal(N, observables, file_prefix="", verbose=False):
     if not os.path.exists(f"{file_prefix}_tracker.hdf5"):
         raise FileNotFoundError(f"{file_prefix}_tracker.hdf5 does not exist!")
     if not os.path.exists(f"{file_prefix}_physical_bins.npy"):

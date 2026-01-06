@@ -9,9 +9,8 @@ import h5py
 
 
 @nb.njit(
-    "float64(int64, Array(float64, 2, 'F', False, aligned=True), Array(float64, 2, 'C', False, aligned=True), int64, int64, b1)",
-    fastmath=True,
-    cache=False,
+    "float64(int64, Array(float64, 2, 'C'), Array(float64, 2, 'C'), int64, int64, b1)",
+    cache=True,
     parallel=False,
 )
 def mlm_driver(n, counts, weights, b, b_prime, comp_to_first):
@@ -54,22 +53,16 @@ def mlm_driver(n, counts, weights, b, b_prime, comp_to_first):
 
 
 @nb.njit(
-    "(int64, Array(int64, 1, 'C', False, aligned=True), Array(float64, 2, 'A', False, aligned=True), Array(float64, 2, 'F', False, aligned=True), int64, Array(float64, 2, 'C', False, aligned=True), b1)",
+    "(int64, Array(int64, 1, 'C'), Array(float64, 2, 'A'), Array(float64, 2, 'F'), int64, Array(float64, 2, 'C'), b1)",
     parallel=False,
-    cache=False,
+    cache=True,
 )
 def _closest_pair_driver(
     n_items, things_to_recalculate, scores, counts, n_hypotheses, weights, comp_to_first
 ):
     h_range = range(1) if comp_to_first else range(n_hypotheses)
 
-    row_min_vals = np.full(n_items, np.inf, dtype=np.float64)
-    row_min_cols = np.full(n_items, -1, dtype=np.int64)
-
     for i in range(n_items):
-        local_min_val = np.inf
-        local_min_col = -1
-
         for j_idx in range(len(things_to_recalculate)):
             j = things_to_recalculate[j_idx]
             if i == j:
@@ -83,20 +76,13 @@ def _closest_pair_driver(
                     t2 = counts[h_prime, j]
                     t4 = counts[h_prime, i]
 
-                    metric_val += (t1 * t2 - t3 * t4) ** 2 * weights[h, h_prime] ** 4
+                    term = (t1 * t2 - t3 * t4)
+                    w = weights[h, h_prime]
+                    metric_val += (term*term) * (w*w*w*w)
+
             scores[i][j] = metric_val
 
-            if metric_val < local_min_val:
-                local_min_val = metric_val
-                local_min_col = j
-
-        row_min_vals[i] = local_min_val
-        row_min_cols[i] = local_min_col
-
-    best_row = np.argmin(row_min_vals)
-    best_col = row_min_cols[best_row]
-
-    return (best_row, best_col)
+    return np.argmin(scores)
 
 
 class Merger(ABC):
@@ -178,8 +164,8 @@ class Merger(ABC):
 
         self.comp_to_first = comp_to_first
 
-        self.counts = np.asfortranarray(np.vstack(counts).astype(np.float64))
-        self.counts[~np.isfinite(self.counts)] = 0
+        self.counts = np.vstack(counts).astype(np.float64)
+        # self.counts[~np.isfinite(self.counts)] = 0
 
         self.bin_edges = np.array(bin_edges, dtype=np.float64)
 
@@ -307,7 +293,11 @@ class MergerLocal(Merger):
             self.tracker = None
 
     @staticmethod
-    @nb.njit(cache=False, fastmath=True, nogil=True)
+    @nb.njit(
+        "(Array(float64, 2, 'C'), Array(float64, 1, 'C'), int64, int64)",
+        cache=True, 
+        fastmath=True
+    )
     def __merge_driver(counts, bin_edges, first_part, second_part):
         """This method is the numba-ified function that is called by _merge.
         It handles merging two histogram bins together and editing the bin edges inplace
@@ -380,7 +370,7 @@ class MergerLocal(Merger):
         else:
             raise ValueError("This is local binning! Can only merge ahead or behind!")
 
-    def run(self, target_bin_number=2, return_counts=False):
+    def run(self, target_bin_number, return_counts=False):
         """Runs the merger
 
         Parameters
@@ -404,7 +394,7 @@ class MergerLocal(Merger):
             position=0,
         )
 
-        things_to_recalculate = set(range(1, self.n_items - 1))
+        things_to_recalculate = range(1, self.n_items - 1)
 
         scores = np.full((self.n_items - 1, 3), np.inf, dtype=np.float64)
         # stores the 2 indices being merged and the score as a matrix
@@ -437,19 +427,23 @@ class MergerLocal(Merger):
                         ),
                     )
 
+            #The last column is the scores, and the first 2 the indices
             i1, i2 = scores[np.argmin(scores[:, 2])][:-1].astype(int)
 
-            # remove the merged index and move all scores down 1
+            # remove the merged index and move all indices down 1
             scores[:, :-1][i1:] -= 1
             scores = np.delete(scores, i1, axis=0)
 
             if i1 == 0:
-                things_to_recalculate = {0, 1}
+                things_to_recalculate = (0, 1)
                 i1, i2 = i2, i1
             elif i1 == self.n_items - 2:
-                things_to_recalculate = {i1 - 2, i1 - 3}
+                if self.n_items <= 4:
+                    things_to_recalculate = (i1 - 1, i1 - 2)
+                else:
+                    things_to_recalculate = (i1 - 2, i1 - 3)
             else:
-                things_to_recalculate = {i1 - 1, i1}
+                things_to_recalculate = (i1 - 1, i1)
 
             self.counts, self.bin_edges = self._merge(i1, i2)
 
@@ -474,7 +468,7 @@ class MergerNonlocal(Merger):
         weights=None,
         comp_to_first=False,
         map_at=None,
-        file_path="",
+        file_path="./",
         file_name="",
     ) -> None:
         """The initializer for the non-local merging class
@@ -504,6 +498,21 @@ class MergerNonlocal(Merger):
         """
 
         unrolled_counts = list(map(np.ndarray.ravel, map(np.array, counts)))
+        sizes = np.array([len(i) for i in unrolled_counts])
+        if np.any(sizes != sizes[0]):
+            raise ValueError(f"All arrays must be the same length! Your unrolled arrays are of length: {sizes}")
+
+        for nd_arr in counts:
+            nd_arr = np.array(nd_arr)
+            if len(nd_arr.shape) > 1:
+                for i, size in enumerate(nd_arr.shape):
+                    if i == len(bin_edges):
+                        raise IndexError(f"No bin edges provided for dimension {i}!")
+                    if len(bin_edges[i]) != size + 1:
+                        raise ValueError(f"Bin edge for dimension {i} is of invalid size {len(bin_edges[i])} != {size + 1}!")
+            else:
+                if len(bin_edges) != len(counts[0]) + 1:
+                    raise ValueError(f"Bin edges are of invalid size {len(bin_edges)} != {len(counts[0]) + 1}!")
 
         unrolled_bins = np.arange(len(unrolled_counts[0]) + 1)
 
@@ -516,6 +525,7 @@ class MergerNonlocal(Merger):
         )
 
         self._merger_type = "Non-local"
+        self.counts = np.asfortranarray(self.counts)
 
         self.physical_bins = np.array(bin_edges, dtype=object)
         self.n_observables = len(bin_edges)
@@ -534,7 +544,7 @@ class MergerNonlocal(Merger):
                 file_path += "/"
 
             tracker_name = f"{file_path}{file_name}_tracker.hdf5"
-            bins_name = f".{file_path}{file_name}_physical_bins.npy"
+            bins_name = f"{file_path}{file_name}_physical_bins.npy"
 
             if os.path.exists(tracker_name):
                 os.system(f"rm {tracker_name} {bins_name}")
@@ -567,17 +577,17 @@ class MergerNonlocal(Merger):
 
     @staticmethod
     @nb.njit(
-        "(int64, int64, Array(float64, 2, 'F', False, aligned=True), Array(float64, 2, 'A', False, aligned=True), DictType(int64, Array(int64, 1, 'C')), int64, int64)",
-        cache=False,
+        "(int64, int64, Array(float64, 2, 'F'), Array(float64, 2, 'A'), DictType(int64, Array(int64, 1, 'C')), int64, int64)",
+        cache=True,
+        fastmath=True
     )
     def __merge_driver_tracker(
         n_items, n_hypotheses, counts, scores, cur_tracker, i, j
     ):
-        indices = {i, j}
         k = 0
         sum_term = np.zeros(n_hypotheses)
-        for c in np.arange(n_items):
-            if c not in indices:
+        for c in range(n_items):
+            if c != i and c != j:
                 # if c == k then you don't need to do anything!
                 # The bins pre and post merge will be the same
                 if c != k:
@@ -599,7 +609,15 @@ class MergerNonlocal(Merger):
 
         return k, counts, scores
 
-    def __convert_tracker(self):
+    @staticmethod
+    @nb.njit(
+        "(DictType(int64, Array(int64, 1, 'C')), int64)",
+        cache=True
+    )
+    def __convert_tracker(
+        cur_tracker,
+        original_n_items
+    ):
         """Converts the internal tracker into a bin map
         That maps original bin indices to new ones
 
@@ -611,8 +629,8 @@ class MergerNonlocal(Merger):
             that value j is the new placement for any element that would
             land in i for the original binning)
         """
-        new_map = np.empty(self.original_n_items)
-        for new_place, original_placement in self.__cur_iteration_tracker.items():
+        new_map = np.zeros(original_n_items, dtype=np.int64)
+        for new_place, original_placement in cur_tracker.items():
             for original_place in original_placement:
                 new_map[original_place] = new_place
 
@@ -645,7 +663,7 @@ class MergerNonlocal(Merger):
         while self.n_items > target_bin_number:
 
             ###### FIND BINS TO MERGE ######
-            min_1, min_2 = _closest_pair_driver(
+            min_arg = _closest_pair_driver(
                 self.n_items,
                 self.things_to_recalculate,
                 self.scores,
@@ -654,6 +672,7 @@ class MergerNonlocal(Merger):
                 self.weights,
                 self.comp_to_first,
             )
+            min_1, min_2 = np.unravel_index(min_arg, self.scores.shape)
 
             ##### MERGE STEP ######
             if self.tracker is not None:
@@ -691,7 +710,9 @@ class MergerNonlocal(Merger):
             ##### UPDATE STATE ######
             self.n_items -= 1
             if self.n_items in self.map_at:
-                self.tracker[str(self.n_items)][:] = self.__convert_tracker()
+                self.tracker[str(self.n_items)][:] = self.__convert_tracker(
+                    self.__cur_iteration_tracker, self.original_n_items
+                )
 
             pbar.update(1)
 

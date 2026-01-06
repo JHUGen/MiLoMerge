@@ -2,7 +2,11 @@ import numpy as np
 import numba as nb
 
 
-@nb.njit()
+@nb.njit(
+    "(Array(float64, 1, 'A'), Array(float64, 1, 'A'))",
+    fastmath=True,
+    cache=True
+)
 def ROC_curve(sample1, sample2):
     ratios = np.argsort(sample1 / sample2)
     PAC = np.zeros(len(sample1) + 1, dtype=np.float64)
@@ -14,10 +18,14 @@ def ROC_curve(sample1, sample2):
     TPR = PAC / (sample1.sum())  # vectorized calculation
     FPR = NAC / (sample2.sum())
 
-    return TPR, FPR, np.abs(np.trapz(FPR, TPR))
+    return TPR, FPR, np.trapz(FPR, TPR)
 
 
-@nb.njit()
+@nb.njit(
+    "(Array(float64, 1, 'A'), Array(float64, 1, 'A'))",
+    fastmath=True,
+    cache=True
+)
 def length_scale_ROC(sample1, sample2):
     if np.any(sample2 < 0):
         if np.any(sample1 < 0):
