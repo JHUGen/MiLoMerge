@@ -11,12 +11,9 @@ name: Upload Python Package
 on:
   workflow_dispatch:
   pull_request:
-  push:
-    branches:
-      - main
+  push: [ "master" ]
   release:
-    types:
-      - published
+    types: [published]
 
 permissions:
   contents: read
@@ -26,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
