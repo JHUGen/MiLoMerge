@@ -1,40 +1,71 @@
+from __future__ import annotations
+from collections.abc import Iterable
+import sys
+import os
+
+import MiLoMerge
+
+
+# sys.path.insert(0, os.path.abspath(f"../../src/MiLoMerge/"))
+# print()
+# print(sys.path)
+# print()
+
 # Configuration file for the Sphinx documentation builder.
 #
-# This file only contains a selection of the most common options. For a full
-# list see the documentation:
+# For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-# -- Path setup --------------------------------------------------------------
-
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
-
-
 # -- Project information -----------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'Bin Optimizer'
-copyright = '2024, M. Panagioutou, M. Srivastav, L. Kang, A.V. Gritsan'
-author = 'M. Panagioutou, M. Srivastav, L. Kang, A.V. Gritsan'
+project = "MiLoMerge"
+copyright = "2025, MiLoMerge Authors"
+author = "Mohit Srivastav, Michalis Panagiotou, Lucas Kang"
+version = release = "1.0.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['sphinx.ext.autodoc',
+
+autodoc_default_options = {
+    'members': True,
+    'private-members': False,
+    'special-members': False,  # This line prevents documentation of methods like __eq__
+    # 'show-inheritance': True,
+    'imported-members': True
+}
+
+
+extensions = [
+    "myst_parser",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.autodoc.typehints",
+    "sphinx_copybutton",
+
     'sphinx.ext.doctest',
-    'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
-    'sphinx.ext.mathjax',
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
+    # 'sphinx.ext.linkcode',
     'sphinx.ext.githubpages',
-    'sphinx.ext.napoleon',
-    ]
+]
+
+autodoc_mock_imports = ['numpy', 'numba', 'tqdm', 'h5py']
+templates_path = ['_templates']
+exclude_patterns = []
+
+# -- Options for HTML output -------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
+
+html_theme = "furo"
+html_static_path = ['_static']
+
 
 autoclass_content = "both"
 
@@ -55,57 +86,47 @@ napoleon_type_aliases = {
     'array_like': ':term:`array_like`',
 }
 
+source_suffix = [".rst", ".md"]
+exclude_patterns = [
+    "_build",
+    "**.ipynb_checkpoints",
+    "Thumbs.db",
+    ".DS_Store",
+    ".env",
+    ".venv",
+]
 
-autodoc_typehints = "description"
-
-templates_path = ['_templates']
-exclude_patterns = []
-
-#Getting it to find the modules
-import os
-import sys
-sys.path.insert(0, os.path.abspath('../../optimized_binning/'))
-
-# -- Options for HTML output -------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
-
-html_theme = 'sphinx_rtd_theme'
-# html_theme = 'classic'
-html_static_path = ['_static']
-html_theme_options = {}
-
-
-html_sidebars = { '**': ['globaltoc.html', 'relations.html', 'sourcelink.html', 'searchbox.html', 'index.html', 'py-modindex.html'] }
-
-intersphinx_mapping = {'Python 3': ('https://docs.python.org/3', None),
-'matplotlib': ('https://matplotlib.org/stable/', None),
-'numpy': ('https://numpy.org/doc/stable/', None),
-'Sphinx': ('https://www.sphinx-doc.org/en/master/', None),
+html_theme_options = {
+    "footer_icons": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/MohitS704/bin_merging",
+            "html": """
+                <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+                </svg>
+            """,
+            "class": "",
+        },
+    ],
+    "source_repository": "https://github.com/MohitS704/bin_merging",
+    "source_branch": "main",
+    "source_directory": "docs/",
 }
 
-# inside conf.py
-#latex_engine = 'xelatex'
-latex_elements = {
-    'fontpkg': r'''
-\setmainfont{DejaVu Serif}
-\setsansfont{DejaVu Sans}
-\setmonofont{DejaVu Sans Mono}
-''',
-    'preamble': r'''
-\usepackage[titles]{tocloft}
-\cftsetpnumwidth {1.25cm}\cftsetrmarg{1.5cm}
-\setlength{\cftchapnumwidth}{0.75cm}
-\setlength{\cftsecindent}{\cftchapnumwidth}
-\setlength{\cftsecnumwidth}{1.25cm}
-''',
-    'fncychap': r'\usepackage[Bjornstrup]{fncychap}',
-    'printindex': r'\footnotesize\raggedright\printindex',
+myst_enable_extensions = [
+    "colon_fence",
+]
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "numpy": ('https://numpy.org/doc/stable/', None),
+    "collections.abs" : ("https://docs.python.org/3/library/collections.abc.html", None),
 }
-latex_show_urls = 'footnote'
 
+nitpick_ignore = [
+    ("py:class", "_io.StringIO"),
+    ("py:class", "_io.BytesIO"),
+]
 
-# html_sidebars = {
-#         '**': sidebar_list
-#     }
-
-
+always_document_param_types = True

@@ -220,7 +220,7 @@ class MergerLocal(Merger):
         weights=None,
         comp_to_first=False,
         map_at=None,
-        file_path="",
+        file_path="./",
         file_name="",
     ) -> None:
         """The initializer for the local merging class
@@ -230,7 +230,7 @@ class MergerLocal(Merger):
         bin_edges : numpy.ndarray
             These are the edges of your histogram that correspond to physical quantities
         counts : numpy.ndarray
-            A series of arrays that correspond to the number of events between your bin edges
+            A series of arrays that correspond to the number of events between your bin edges.
         weights : numpy.ndarray, optional
             An array of the weights associated for each of the counts.
             If none are provided, the weights will be 1, by default None
@@ -240,16 +240,19 @@ class MergerLocal(Merger):
         map_at : list, optional
             A list of bin numbers at which you would like the mapping from
             the original sample to be recorded, by default None
-        brute_force_at : int, optional
-            A value at or below which the merger will utilize the "brute-force" approach
-            of merging by calculating a total ROC score, by default 10
-        file_prefix : str, optional
-            This is the prefix that comes before the file bin map before "_tracker.hdf5"
+        file_path : str, optional
+            The directory to place "_tracker.hdf5" should mapping be desired,
+            by default "./"
+        file_name : str, optional
+            The file prefix before "_tracker.hdf5" to identify this mapping,
+            by default ""
 
         Raises
         ------
         ValueError
             The dimension of the bin edges can only be 1-dimensional
+        NotADirectoryError
+            If file_path is not a valid directory, raise an error
         """
         super().__init__(
             bin_edges,

@@ -4,7 +4,7 @@ import numpy as np
 import h5py
 
 
-def load_file_local(fname, key):
+def __load_file_local(fname, key):
     """Simple function to load and return an h5py file
 
     Parameters
@@ -23,7 +23,7 @@ def load_file_local(fname, key):
     return f[key][:]
 
 
-def load_file_nonlocal(fname_tracker, fname_bins, key):
+def __load_file_nonlocal(fname_tracker, fname_bins, key):
     """Simple function to load and return an h5py file
     alongside its corresponding "physical bins" file
 
@@ -51,6 +51,49 @@ def load_file_nonlocal(fname_tracker, fname_bins, key):
 
 
 def place_event_nonlocal(N, *observable, file_prefix, verbose=False):
+    """This function takes in one N-dimensional observable from data
+    and utilizes the mapping and saved physical bins
+    from MiLoMerge.MergerNonlocal to output where
+    that event would go in the final nonlocal binning.
+
+    Parameters
+    ----------
+    N : int
+        The number of bins in the mapping to use
+    observable : float
+        args input where one inputs observables
+        in the same order as the input binning to MiLoMerge
+    file_prefix : str
+        The entirety of the filepath before _tracker.hdf5 or
+        "_physical_bins.npy". This argument should
+        be the same as `f"{file_path} + {file_prefix}"`,
+        where `file_path` and `file_prefix` are the inputs
+        given to MiLoMerge.MergerNonlocal.
+    verbose : bool, optional
+        Whether additional print statements
+        are turned on, by default False
+
+    Returns
+    -------
+    int
+        The index of where the event is placed in the final binning.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the prefix is not suitable to find the appropriate
+        tracker.hdf5 file, raise an error.
+    FileNotFoundError
+        If the prefix is not suitable to find the appropriate
+        physical_bins.npy file, raise an error.
+    ValueError
+        If any observable is outside of the provided bins, raise
+        an error
+    ValueError
+        If the dimensions of the observable and 
+        the dimensions of the bins are not compatible, raise
+        an error
+    """
     if not os.path.exists(f"{file_prefix}_tracker.hdf5"):
         raise FileNotFoundError(f"{file_prefix}_tracker.hdf5 does not exist!")
     if not os.path.exists(f"{file_prefix}_physical_bins.npy"):
@@ -58,11 +101,14 @@ def place_event_nonlocal(N, *observable, file_prefix, verbose=False):
 
     fname_tracker = f"{file_prefix}_tracker.hdf5"
     fname_bins = f"{file_prefix}_physical_bins.npy"
-    bin_mapping, physical_bins = load_file_nonlocal(fname_tracker, fname_bins, str(N))
+    bin_mapping, physical_bins = __load_file_nonlocal(fname_tracker, fname_bins, str(N))
 
     observable = np.array(observable)
 
-    subarray_lengths = [len(b) for b in physical_bins]
+    if not (isinstance(physical_bins[0], int) or isinstance(physical_bins[0], float)):
+        subarray_lengths = np.array([len(b) for b in physical_bins])
+    else:
+        subarray_lengths = np.array([len(physical_bins)])
     if len(physical_bins.shape) > 1 and len(observable) > 1:
         n_observables = physical_bins.shape[0]
         n_physical_bins = physical_bins.shape[1]
@@ -147,6 +193,55 @@ def place_event_nonlocal(N, *observable, file_prefix, verbose=False):
 
 
 def place_array_nonlocal(N, observables, file_prefix="", verbose=False):
+    """This function takes in an array of N-dimensional observables from data
+    and utilizes the mapping and saved physical bins
+    from MiLoMerge.MergerNonlocal to output where
+    that event would go in the final nonlocal binning. The array
+    version of place_event_nonlocal.
+
+    Parameters
+    ----------
+    N : int
+        The number of bins in the mapping to use
+    observables : numpy.ndarray[float]
+        Array should be of shape (#events, #observables). Contains
+        all the observables to be binned.
+    file_prefix : str
+        The entirety of the filepath before _tracker.hdf5 or
+        "_physical_bins.npy". This argument should
+        be the same as `f"{file_path} + {file_prefix}"`,
+        where `file_path` and `file_prefix` are the inputs
+        given to MiLoMerge.MergerNonlocal.
+    verbose : bool, optional
+        Whether additional print statements
+        are turned on, by default False
+
+    Returns
+    -------
+    numpy.ndarray[int]
+        A 1-d array of indices
+        for where the events are placed in the final binning.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the prefix is not suitable to find the appropriate
+        tracker.hdf5 file, raise an error.
+    FileNotFoundError
+        If the prefix is not suitable to find the appropriate
+        physical_bins.npy file, raise an error.
+    ValueError
+        If any observable is outside of the provided bins, raise
+        an error
+    ValueError
+        If the dimensions of the observable and 
+        the dimensions of the bins are not compatible, raise
+        an error
+    KeyError
+        If any observable is outside the provided bins,
+        raise an error
+    """
+
     if not os.path.exists(f"{file_prefix}_tracker.hdf5"):
         raise FileNotFoundError(f"{file_prefix}_tracker.hdf5 does not exist!")
     if not os.path.exists(f"{file_prefix}_physical_bins.npy"):
@@ -154,10 +249,13 @@ def place_array_nonlocal(N, observables, file_prefix="", verbose=False):
 
     fname_tracker = f"{file_prefix}_tracker.hdf5"
     fname_bins = f"{file_prefix}_physical_bins.npy"
-    bin_mapping, physical_bins = load_file_nonlocal(fname_tracker, fname_bins, str(N))
+    bin_mapping, physical_bins = __load_file_nonlocal(fname_tracker, fname_bins, str(N))
     observables_stacked = np.array(observables)
 
-    subarray_lengths = np.array([len(b) for b in physical_bins])
+    if not (isinstance(physical_bins[0], int) or isinstance(physical_bins[0], float)):
+        subarray_lengths = np.array([len(b) for b in physical_bins])
+    else:
+        subarray_lengths = np.array([len(physical_bins)])
     if physical_bins.ndim > 1:
         if len(observables_stacked[0]) != len(physical_bins):
             raise ValueError(
@@ -231,12 +329,44 @@ def place_array_nonlocal(N, observables, file_prefix="", verbose=False):
     return bin_mapping[unrolled_index].ravel()
 
 
-def place_local(N, observable_array, file_prefix="", verbose=False):
+def place_local(N, observable_array, file_prefix, verbose=False):
+    """Places 1-dimensional data into the respective bins for
+    a given bin number. Equivalent to running numpy.histogram
+    for the given N+1 bin edges stored.
+
+    Parameters
+    ----------
+    N : int
+        The number of bins that are desired
+    observable_array : numpy.ndarray
+        A 1-d array of datapoints to be binned with N bins
+    file_prefix : str, optional
+        The entirety of the filepath before _tracker.hdf5 or
+        "_physical_bins.npy". This argument should
+        be the same as `f"{file_path} + {file_prefix}"`,
+        where `file_path` and `file_prefix` are the inputs
+        given to MiLoMerge.MergerNonlocal.
+    verbose : bool, optional
+        Whether additional print statements
+        are turned on, by default False, by default False
+
+    Returns
+    -------
+    numpy.ndarray[int]
+        A 1-d array of indices
+        for where the events are placed in the final binning.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the prefix is not suitable to find the appropriate
+        tracker.hdf5 file, raise an error.
+    """
     if not os.path.exists(f"{file_prefix}_tracker.hdf5"):
         raise FileNotFoundError(f"{file_prefix}_tracker.hdf5 does not exist!")
 
     fname_tracker = f"{file_prefix}_tracker.hdf5"
-    bin_mapping = load_file_local(fname_tracker, str(N))
+    bin_mapping = __load_file_local(fname_tracker, str(N))
 
     if verbose:
         print(f"Using file {os.path.abspath(fname_tracker)}")
@@ -244,9 +374,9 @@ def place_local(N, observable_array, file_prefix="", verbose=False):
 
     placements = np.searchsorted(bin_mapping, observable_array) - 1
 
-    if np.any((placements < 0) or (placements == len(bin_mapping))):
+    if np.any((placements < 0) | (placements >= len(bin_mapping))):
         warnings.warn(
             "Some items placed out of bounds! Please check your phasespace to ensure it is within your original binning!"
         )
 
-    return placements
+    return np.bincount(placements, minlength=N), bin_mapping
