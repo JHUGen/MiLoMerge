@@ -23,10 +23,6 @@ dependencies = [
   "tqdm",
 ]
 
-classifiers = [
-  "OSI Approved :: BSD License"
-]
-
 [project.urls]
 "Github" = "https://github.com/MohitS704/bin_merging"
 Discussions = "https://github.com/MohitS704/bin_merging/discussions"
