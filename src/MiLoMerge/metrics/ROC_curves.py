@@ -2,8 +2,9 @@ import numpy as np
 import numba as nb
 from collections.abc import Iterable
 
+
 @nb.njit("(Array(float64, 1, 'A'), Array(float64, 1, 'A'))", fastmath=True, cache=True)
-def ROC_curve(sample1 : Iterable[float], sample2 : Iterable[float]):
+def ROC_curve(sample1: Iterable[float], sample2: Iterable[float]):
     """A function to calculate the classical ROC curve given 2 distributions
 
     Parameters
@@ -33,7 +34,7 @@ def ROC_curve(sample1 : Iterable[float], sample2 : Iterable[float]):
 
 
 @nb.njit("(Array(float64, 1, 'A'), Array(float64, 1, 'A'))", fastmath=True, cache=False)
-def LOC_curve(sample1, sample2):
+def LOC_curve(sample1: Iterable[float], sample2: Iterable[float]):
     """A function to calculate the LOC curve described in (ARXIV LINK)
     given 2 distributions.
 

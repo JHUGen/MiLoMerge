@@ -192,12 +192,18 @@
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../../MiLoMerge.html">MiLoMerge package</a><input aria-label="Toggle navigation of MiLoMerge package" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../MiLoMerge.html">Package Documentation</a><input aria-label="Toggle navigation of Package Documentation" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../Mergers.html">Mergers</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../Metrics.html">Distribution Metrics</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../Placement.html">Placing Events After Merging</a></li>
 </ul>
 </li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../Tutorials.html">MiLoMerge Tutorials</a><input aria-label="Toggle navigation of MiLoMerge Tutorials" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../Tests.html">Test Cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../Examples.html">Basic Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../FAQ.html">Frequently Asked Questions</a></li>
 </ul>
 
 </div>
@@ -235,6 +241,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">__load_file_local</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
@@ -285,7 +292,9 @@
 
 <div class="viewcode-block" id="place_event_nonlocal">
 <a class="viewcode-back" href="../../../Placement.html#MiLoMerge.place_event_nonlocal">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">place_event_nonlocal</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="o">*</span><span class="n">observable</span><span class="p">,</span> <span class="n">file_prefix</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">place_event_nonlocal</span><span class="p">(</span>
+    <span class="n">N</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">*</span><span class="n">observable</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">file_prefix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;This function takes in one N-dimensional observable from data</span>
 <span class="sd">    and utilizes the mapping and saved physical bins</span>
 <span class="sd">    from MiLoMerge.MergerNonlocal to output where</span>
@@ -325,7 +334,7 @@
 <span class="sd">        If any observable is outside of the provided bins, raise</span>
 <span class="sd">        an error</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If the dimensions of the observable and </span>
+<span class="sd">        If the dimensions of the observable and</span>
 <span class="sd">        the dimensions of the bins are not compatible, raise</span>
 <span class="sd">        an error</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -340,7 +349,10 @@
 
     <span class="n">observable</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">observable</span><span class="p">)</span>
 
-    <span class="n">subarray_lengths</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">physical_bins</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">physical_bins</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">physical_bins</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">float</span><span class="p">)):</span>
+        <span class="n">subarray_lengths</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">physical_bins</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">subarray_lengths</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">physical_bins</span><span class="p">)])</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">physical_bins</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">observable</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
         <span class="n">n_observables</span> <span class="o">=</span> <span class="n">physical_bins</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">n_physical_bins</span> <span class="o">=</span> <span class="n">physical_bins</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
@@ -427,7 +439,12 @@
 
 <div class="viewcode-block" id="place_array_nonlocal">
 <a class="viewcode-back" href="../../../Placement.html#MiLoMerge.place_array_nonlocal">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">place_array_nonlocal</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">observables</span><span class="p">,</span> <span class="n">file_prefix</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">place_array_nonlocal</span><span class="p">(</span>
+    <span class="n">N</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">observables</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">float</span><span class="p">]],</span>
+    <span class="n">file_prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;This function takes in an array of N-dimensional observables from data</span>
 <span class="sd">    and utilizes the mapping and saved physical bins</span>
 <span class="sd">    from MiLoMerge.MergerNonlocal to output where</span>
@@ -469,7 +486,7 @@
 <span class="sd">        If any observable is outside of the provided bins, raise</span>
 <span class="sd">        an error</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If the dimensions of the observable and </span>
+<span class="sd">        If the dimensions of the observable and</span>
 <span class="sd">        the dimensions of the bins are not compatible, raise</span>
 <span class="sd">        an error</span>
 <span class="sd">    KeyError</span>
@@ -487,7 +504,10 @@
     <span class="n">bin_mapping</span><span class="p">,</span> <span class="n">physical_bins</span> <span class="o">=</span> <span class="n">__load_file_nonlocal</span><span class="p">(</span><span class="n">fname_tracker</span><span class="p">,</span> <span class="n">fname_bins</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">N</span><span class="p">))</span>
     <span class="n">observables_stacked</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">observables</span><span class="p">)</span>
 
-    <span class="n">subarray_lengths</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">physical_bins</span><span class="p">])</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">physical_bins</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">physical_bins</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">float</span><span class="p">)):</span>
+        <span class="n">subarray_lengths</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">physical_bins</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">subarray_lengths</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">physical_bins</span><span class="p">)])</span>
     <span class="k">if</span> <span class="n">physical_bins</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">observables_stacked</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">physical_bins</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -564,7 +584,12 @@
 
 <div class="viewcode-block" id="place_local">
 <a class="viewcode-back" href="../../../Placement.html#MiLoMerge.place_local">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">place_local</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">observable_array</span><span class="p">,</span> <span class="n">file_prefix</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">place_local</span><span class="p">(</span>
+    <span class="n">N</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">observable_array</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+    <span class="n">file_prefix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Places 1-dimensional data into the respective bins for</span>
 <span class="sd">    a given bin number. Equivalent to running numpy.histogram</span>
 <span class="sd">    for the given N+1 bin edges stored.</span>
@@ -587,9 +612,9 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    numpy.ndarray[int]</span>
-<span class="sd">        A 1-d array of indices</span>
-<span class="sd">        for where the events are placed in the final binning.</span>
+<span class="sd">    tuple(numpy.ndarray[int], numpy.ndarray(float))</span>
+<span class="sd">        Returns the counts and bin edges for the data in the</span>
+<span class="sd">        same fashion as numpy.histogram.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
@@ -609,12 +634,12 @@
 
     <span class="n">placements</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">bin_mapping</span><span class="p">,</span> <span class="n">observable_array</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
 
-    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">((</span><span class="n">placements</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">placements</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">bin_mapping</span><span class="p">))):</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">((</span><span class="n">placements</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">placements</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">bin_mapping</span><span class="p">))):</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
             <span class="s2">&quot;Some items placed out of bounds! Please check your phasespace to ensure it is within your original binning!&quot;</span>
         <span class="p">)</span>
 
-    <span class="k">return</span> <span class="n">placements</span></div>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">placements</span><span class="p">,</span> <span class="n">minlength</span><span class="o">=</span><span class="n">N</span><span class="p">),</span> <span class="n">bin_mapping</span></div>
 
 </pre></div>
         </article>

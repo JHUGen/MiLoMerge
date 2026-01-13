@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="MiLoMerge package" href="MiLoMerge.html">
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Package Documentation" href="MiLoMerge.html">
 
     <!-- Generated with Sphinx 8.1.3 and Furo 2025.12.19 -->
         <title>MiLoMerge 1.0.0 documentation</title>
@@ -193,12 +193,18 @@
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="MiLoMerge.html">MiLoMerge package</a><input aria-label="Toggle navigation of MiLoMerge package" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="MiLoMerge.html">Package Documentation</a><input aria-label="Toggle navigation of Package Documentation" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="Mergers.html">Mergers</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Metrics.html">Distribution Metrics</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Placement.html">Placing Events After Merging</a></li>
 </ul>
 </li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="Tutorials.html">MiLoMerge Tutorials</a><input aria-label="Toggle navigation of MiLoMerge Tutorials" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="Tests.html">Test Cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Examples.html">Basic Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="FAQ.html">Frequently Asked Questions</a></li>
 </ul>
 
 </div>
@@ -243,13 +249,48 @@
         <article role="main" id="furo-main-content">
           <section id="milomerge-documentation">
 <h1>MiLoMerge Documentation<a class="headerlink" href="#milomerge-documentation" title="Link to this heading">¶</a></h1>
+<p>This documentation is provided to assist in the usage of the MiLoMerge
+package.</p>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="MiLoMerge.html">MiLoMerge package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="Mergers.html">Mergers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Metrics.html">Distribution Metrics</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Placement.html">Placing Events After Merging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="MiLoMerge.html">Package Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="Mergers.html">Mergers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="Mergers.html#MiLoMerge.MergerLocal"><code class="docutils literal notranslate"><span class="pre">MergerLocal</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="Mergers.html#MiLoMerge.MergerNonlocal"><code class="docutils literal notranslate"><span class="pre">MergerNonlocal</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="Metrics.html">Distribution Metrics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="Metrics.html#MiLoMerge.ROC_curve"><code class="docutils literal notranslate"><span class="pre">ROC_curve()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="Metrics.html#MiLoMerge.LOC_curve"><code class="docutils literal notranslate"><span class="pre">LOC_curve()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="Placement.html">Placing Events After Merging</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="Placement.html#MiLoMerge.place_event_nonlocal"><code class="docutils literal notranslate"><span class="pre">place_event_nonlocal()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="Placement.html#MiLoMerge.place_array_nonlocal"><code class="docutils literal notranslate"><span class="pre">place_array_nonlocal()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="Placement.html#MiLoMerge.place_local"><code class="docutils literal notranslate"><span class="pre">place_local()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="Tutorials.html">MiLoMerge Tutorials</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="Tests.html">Test Cases</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="Tests.html#local-usage">Local Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="Tests.html#nonlocal-usage">Nonlocal Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="Tests.html#post-merging-bin-placement">Post-merging Bin Placement</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="Examples.html">Basic Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="Examples.html#generating-a-toy-dataset-and-plotting-separability-as-a-function-of-bin-number">Generating a Toy Dataset and Plotting Separability as a Function of Bin Number</a></li>
+<li class="toctree-l3"><a class="reference internal" href="Examples.html#using-the-roc-and-loc-curves-for-n-d-distributions">Using the ROC and LOC curves for N-d distributions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="FAQ.html">Frequently Asked Questions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="FAQ.html#where-should-i-go-if-i-encounter-a-bug">Where should I go if I encounter a bug?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="FAQ.html#is-there-a-paper-about-this-stuff">Is there a paper about this stuff?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="FAQ.html#where-has-this-package-been-used">Where has this package been used?</a></li>
 </ul>
 </li>
 </ul>
@@ -266,7 +307,7 @@
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">MiLoMerge package</div>
+                <div class="title">Package Documentation</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -308,5 +349,6 @@
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="_static/copybutton.js?v=f281be69"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     </body>
 </html>

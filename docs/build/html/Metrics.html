@@ -193,12 +193,18 @@
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1 current has-children"><a class="reference internal" href="MiLoMerge.html">MiLoMerge package</a><input aria-label="Toggle navigation of MiLoMerge package" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="MiLoMerge.html">Package Documentation</a><input aria-label="Toggle navigation of Package Documentation" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="Mergers.html">Mergers</a></li>
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Distribution Metrics</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Placement.html">Placing Events After Merging</a></li>
 </ul>
 </li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="Tutorials.html">MiLoMerge Tutorials</a><input aria-label="Toggle navigation of MiLoMerge Tutorials" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="Tests.html">Test Cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Examples.html">Basic Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="FAQ.html">Frequently Asked Questions</a></li>
 </ul>
 
 </div>
@@ -243,6 +249,17 @@
         <article role="main" id="furo-main-content">
           <section id="distribution-metrics">
 <span id="metrics"></span><h1>Distribution Metrics<a class="headerlink" href="#distribution-metrics" title="Link to this heading">¶</a></h1>
+<p>These are metrics utilized to compare 2 distributions. The LOC Curve,
+which utilizes the length of the curve to quantify separation,
+is the generalized case of the traditional ROC curve, which
+utilized the area under the curve using numpy.trapz.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><strong>Note: Both functions require 1-dimensional arrays as input.</strong>
+This is simply to make the function completely generalizeable. One can
+make any N-dimensional function “1-dimensional” by calling <code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.ndarray.ravel()</span></code>.
+The functions will sort the bins and handle the rest.</p>
+</div>
 <dl class="py function">
 <dt class="sig sig-object py" id="MiLoMerge.ROC_curve">
 <span class="sig-prename descclassname"><span class="pre">MiLoMerge.</span></span><span class="sig-name descname"><span class="pre">ROC_curve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable" title="(in Python v3.14)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable" title="(in Python v3.14)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/MiLoMerge/metrics/ROC_curves.html#ROC_curve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MiLoMerge.ROC_curve" title="Link to this definition">¶</a></dt>
@@ -266,7 +283,7 @@ and False Positive Rate (FPR) per-bin, as well as the Area Under the Curve (AUC)
 
 <dl class="py function">
 <dt class="sig sig-object py" id="MiLoMerge.LOC_curve">
-<span class="sig-prename descclassname"><span class="pre">MiLoMerge.</span></span><span class="sig-name descname"><span class="pre">LOC_curve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/MiLoMerge/metrics/ROC_curves.html#LOC_curve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MiLoMerge.LOC_curve" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">MiLoMerge.</span></span><span class="sig-name descname"><span class="pre">LOC_curve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable" title="(in Python v3.14)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable" title="(in Python v3.14)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/MiLoMerge/metrics/ROC_curves.html#LOC_curve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MiLoMerge.LOC_curve" title="Link to this definition">¶</a></dt>
 <dd><p>A function to calculate the LOC curve described in (ARXIV LINK)
 given 2 distributions.</p>
 <dl class="field-list simple">

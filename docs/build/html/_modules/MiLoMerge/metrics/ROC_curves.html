@@ -192,12 +192,18 @@
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../../MiLoMerge.html">MiLoMerge package</a><input aria-label="Toggle navigation of MiLoMerge package" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../MiLoMerge.html">Package Documentation</a><input aria-label="Toggle navigation of Package Documentation" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../Mergers.html">Mergers</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../Metrics.html">Distribution Metrics</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../Placement.html">Placing Events After Merging</a></li>
 </ul>
 </li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../Tutorials.html">MiLoMerge Tutorials</a><input aria-label="Toggle navigation of MiLoMerge Tutorials" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../Tests.html">Test Cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../Examples.html">Basic Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../FAQ.html">Frequently Asked Questions</a></li>
 </ul>
 
 </div>
@@ -235,10 +241,11 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">numba</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nb</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span>
 
+
 <div class="viewcode-block" id="ROC_curve">
 <a class="viewcode-back" href="../../../Metrics.html#MiLoMerge.ROC_curve">[docs]</a>
 <span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="s2">&quot;(Array(float64, 1, &#39;A&#39;), Array(float64, 1, &#39;A&#39;))&quot;</span><span class="p">,</span> <span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">ROC_curve</span><span class="p">(</span><span class="n">sample1</span> <span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">sample2</span> <span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">float</span><span class="p">]):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">ROC_curve</span><span class="p">(</span><span class="n">sample1</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">sample2</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">float</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A function to calculate the classical ROC curve given 2 distributions</span>
 
 <span class="sd">    Parameters</span>
@@ -271,7 +278,7 @@
 <div class="viewcode-block" id="LOC_curve">
 <a class="viewcode-back" href="../../../Metrics.html#MiLoMerge.LOC_curve">[docs]</a>
 <span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="s2">&quot;(Array(float64, 1, &#39;A&#39;), Array(float64, 1, &#39;A&#39;))&quot;</span><span class="p">,</span> <span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">LOC_curve</span><span class="p">(</span><span class="n">sample1</span><span class="p">,</span> <span class="n">sample2</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">LOC_curve</span><span class="p">(</span><span class="n">sample1</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">sample2</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">float</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A function to calculate the LOC curve described in (ARXIV LINK)</span>
 <span class="sd">    given 2 distributions.</span>
 

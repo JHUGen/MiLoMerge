@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """A package for performing bin merging in an optimal fashion to preserve
 seperability between N hypotheses. Metrics such as the ROC and LOC metrics are provided,
 as well as merging tools in MergerLocal and MergerNonlocal.

@@ -6,6 +6,8 @@ import numpy as np
 import tqdm
 import numba as nb
 import h5py
+from collections.abc import Iterable
+import typing
 
 
 @nb.njit(
@@ -13,7 +15,14 @@ import h5py
     cache=True,
     parallel=False,
 )
-def mlm_driver(n, counts, weights, b, b_prime, comp_to_first):
+def mlm_driver(
+    n: int,
+    counts: Iterable[Iterable[float]],
+    weights: Iterable[Iterable[float]],
+    b: int,
+    b_prime: int,
+    comp_to_first: bool,
+) -> float:
     """This method uses the MLM metric to compare all samples to each other
     and issue a score between the two bin indices.
 
@@ -58,8 +67,14 @@ def mlm_driver(n, counts, weights, b, b_prime, comp_to_first):
     cache=True,
 )
 def _closest_pair_driver(
-    n_items, things_to_recalculate, scores, counts, n_hypotheses, weights, comp_to_first
-):
+    n_items: int,
+    things_to_recalculate: Iterable[int],
+    scores: Iterable[Iterable[float]],
+    counts: Iterable[Iterable[float]],
+    n_hypotheses: int,
+    weights: Iterable[Iterable[float]],
+    comp_to_first: bool,
+) -> int:
     h_range = range(1) if comp_to_first else range(n_hypotheses)
 
     for i in range(n_items):
@@ -90,11 +105,11 @@ class Merger(ABC):
 
     def __init__(
         self,
-        bin_edges,
-        *counts,
-        weights=None,
-        comp_to_first=False,
-        map_at=None,
+        bin_edges: Iterable[float],
+        *counts: Iterable[float],
+        weights: typing.Union[int, Iterable[float]] = None,
+        comp_to_first: bool = False,
+        map_at: Iterable[int] = None,
     ) -> None:
         """The initializer for the baseplate class
 
@@ -215,13 +230,13 @@ class MergerLocal(Merger):
 
     def __init__(
         self,
-        bin_edges,
-        *counts,
-        weights=None,
-        comp_to_first=False,
-        map_at=None,
-        file_path="./",
-        file_name="",
+        bin_edges: Iterable[float],
+        *counts: Iterable[float],
+        weights: Iterable[float] = None,
+        comp_to_first: bool = False,
+        map_at: Iterable[int] = None,
+        file_path: str = "./",
+        file_name: str = "",
     ) -> None:
         """The initializer for the local merging class
 
@@ -301,7 +316,12 @@ class MergerLocal(Merger):
         cache=True,
         fastmath=True,
     )
-    def __merge_driver(counts, bin_edges, first_part, second_part):
+    def __merge_driver(
+        counts: Iterable[Iterable[float]],
+        bin_edges: Iterable[float],
+        first_part: int,
+        second_part: int,
+    ):
         """This method is the numba-ified function that is called by __merge.
         It handles merging two histogram bins together and editing the bin edges inplace
 
@@ -332,7 +352,7 @@ class MergerLocal(Merger):
 
         return (new_counts, new_bin_edges)
 
-    def __merge(self, i, j):
+    def __merge(self, i: int, j: int):
         """Merges bins i and j such that
         the first and last bin edge are always preserved
 
@@ -373,19 +393,25 @@ class MergerLocal(Merger):
         else:
             raise ValueError("This is local binning! Can only merge ahead or behind!")
 
-    def run(self, target_bin_number, return_counts=False):
+    def run(self, target_bin_number: int, return_counts: bool = False):
         """Runs the merger
 
         Parameters
         ----------
-        target_bin_number : int, optional
-            The number of bins you would like to merge down to, by default 2
+        target_bin_number : int
+            The number of bins you would like to merge down to
+
+        return_counts : bool, optional
+            Whether the returned value will have the bin counts
+            returned alongside the bin edges, by default False
 
         Returns
         -------
-        numpy.ndarray
+        numpy.ndarray or tuple(numpy.ndarray, numpy.ndarray)
             Returns the 1-d bin edges that would
-            correspond to the best binning for the number of bins you want
+            correspond to the best binning for the number of bins you want.
+            If return_counts is set to true, also return the internal final bin counts,
+            which have shape (#samples, target_bin_number).
         """
         if self.n_items <= target_bin_number:
             warnings.warn("Merging is pointless! Number of bins already >= target")
@@ -466,13 +492,13 @@ class MergerNonlocal(Merger):
 
     def __init__(
         self,
-        bin_edges,
-        *counts,
-        weights=None,
-        comp_to_first=False,
-        map_at=None,
-        file_path="./",
-        file_name="",
+        bin_edges: Iterable[float],
+        *counts: Iterable[float],
+        weights: Iterable[float] = None,
+        comp_to_first: bool = False,
+        map_at: Iterable[int] = None,
+        file_path: str = "./",
+        file_name: str = "",
     ) -> None:
         """The initializer for the non-local merging class
 
@@ -491,8 +517,12 @@ class MergerNonlocal(Merger):
         map_at : list, optional
             A list of bin numbers at which you would like the mapping from
             the original sample to be recorded, by default None
-        file_prefix : str, optional
-            This is the prefix that comes before the file bin map before "_tracker.hdf5"
+        file_path : str, optional
+            The directory to place "_tracker.hdf5" should mapping be desired,
+            by default "./"
+        file_name : str, optional
+            The file prefix before "_tracker.hdf5" to identify this mapping,
+            by default ""
 
         Raises
         ------
@@ -639,13 +669,13 @@ class MergerNonlocal(Merger):
 
         return new_map
 
-    def run(self, target_bin_number=2):
+    def run(self, target_bin_number: int):
         """Runs the merger
 
         Parameters
         ----------
         target_bin_number : int, optional
-            The number of bins you would like to merge down to, by default 2
+            The number of bins you would like to merge down to
 
         Returns
         -------

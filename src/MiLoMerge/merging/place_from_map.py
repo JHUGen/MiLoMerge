@@ -2,6 +2,7 @@ import warnings
 import os
 import numpy as np
 import h5py
+from collections.abc import Iterable
 
 
 def __load_file_local(fname, key):
@@ -50,7 +51,9 @@ def __load_file_nonlocal(fname_tracker, fname_bins, key):
     return bin_mapping, physical_bins
 
 
-def place_event_nonlocal(N, *observable, file_prefix, verbose=False):
+def place_event_nonlocal(
+    N: int, *observable: float, file_prefix: str, verbose: bool = False
+):
     """This function takes in one N-dimensional observable from data
     and utilizes the mapping and saved physical bins
     from MiLoMerge.MergerNonlocal to output where
@@ -90,7 +93,7 @@ def place_event_nonlocal(N, *observable, file_prefix, verbose=False):
         If any observable is outside of the provided bins, raise
         an error
     ValueError
-        If the dimensions of the observable and 
+        If the dimensions of the observable and
         the dimensions of the bins are not compatible, raise
         an error
     """
@@ -192,7 +195,12 @@ def place_event_nonlocal(N, *observable, file_prefix, verbose=False):
     return mapped_index
 
 
-def place_array_nonlocal(N, observables, file_prefix="", verbose=False):
+def place_array_nonlocal(
+    N: int,
+    observables: Iterable[Iterable[float]],
+    file_prefix: str = "",
+    verbose: bool = False,
+):
     """This function takes in an array of N-dimensional observables from data
     and utilizes the mapping and saved physical bins
     from MiLoMerge.MergerNonlocal to output where
@@ -234,7 +242,7 @@ def place_array_nonlocal(N, observables, file_prefix="", verbose=False):
         If any observable is outside of the provided bins, raise
         an error
     ValueError
-        If the dimensions of the observable and 
+        If the dimensions of the observable and
         the dimensions of the bins are not compatible, raise
         an error
     KeyError
@@ -329,7 +337,12 @@ def place_array_nonlocal(N, observables, file_prefix="", verbose=False):
     return bin_mapping[unrolled_index].ravel()
 
 
-def place_local(N, observable_array, file_prefix, verbose=False):
+def place_local(
+    N: int,
+    observable_array: Iterable[float],
+    file_prefix: str,
+    verbose: bool = False,
+):
     """Places 1-dimensional data into the respective bins for
     a given bin number. Equivalent to running numpy.histogram
     for the given N+1 bin edges stored.
@@ -352,9 +365,9 @@ def place_local(N, observable_array, file_prefix, verbose=False):
 
     Returns
     -------
-    numpy.ndarray[int]
-        A 1-d array of indices
-        for where the events are placed in the final binning.
+    tuple(numpy.ndarray[int], numpy.ndarray(float))
+        Returns the counts and bin edges for the data in the
+        same fashion as numpy.histogram.
 
     Raises
     ------

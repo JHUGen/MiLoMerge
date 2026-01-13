@@ -11,8 +11,13 @@ MiLoMerge Documentation
 .. documentation for details.
 
 
+This documentation is provided to assist in the usage of the MiLoMerge
+package. 
+
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
    
    MiLoMerge
+   Tutorials
+   FAQ
