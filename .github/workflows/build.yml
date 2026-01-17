@@ -44,7 +44,8 @@ jobs:
           path: dist/*
   
   publish:
-    needs: [release-build]
+    needs: 
+      - release-build
     environment: pypi
     permissions:
       id-token: write
@@ -56,11 +57,9 @@ jobs:
       - uses: actions/download-artifact@v7
         with:
           name: Packages
-          path: dist
+          path: dist/
 
-      - name: Generate artifact attestation for sdist and wheel
-        uses: actions/attest-build-provenance@v3
+      - name: Publish release distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          subject-path: "dist/*"
-
-      - uses: pypa/gh-action-pypi-publish@release/v1
+          packages-dir: dist/
