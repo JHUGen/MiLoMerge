@@ -62,7 +62,6 @@ Papers and Talks
 Papers
 ++++++++
 
-.. _Papers:
 
 - (Jan. 15, 2026): `ArXiv:2601.10822 <Maximizing Returns: Optimizing Experimental Observables at the LHC>`_
 
@@ -74,6 +73,6 @@ Talks
 Citing MiLoMerge
 ------------------
 
-If using the MiLoMerge package, please cite the papers listed in the :ref:`Papers` section above.
+If using the MiLoMerge package, please cite the papers listed in the section above.
 
 
