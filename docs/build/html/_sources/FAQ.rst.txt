@@ -8,7 +8,7 @@ Frequently Asked Questions
 Where should I go if I encounter a bug?
 ----------------------------------------
 
-Please raise an issue on Github and/or contact
+Please raise an issue on `Github <https://github.com/JHUGen/MiLoMerge/issues>`_ and/or contact
 the developer team at milomerg@lists.jh.edu with your bug.
 
 

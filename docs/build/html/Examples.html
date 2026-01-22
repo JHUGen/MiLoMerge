@@ -298,7 +298,7 @@ keep calling the run method.</p>
 </section>
 <section id="generating-a-toy-dataset-and-plotting-separability-as-a-function-of-bin-number-large-n">
 <h2>Generating a Toy Dataset and Plotting Separability as a Function of Bin Number (Large N)<a class="headerlink" href="#generating-a-toy-dataset-and-plotting-separability-as-a-function-of-bin-number-large-n" title="Link to this heading">¶</a></h2>
-<div class="highlight-python notranslate" id="id1"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<div class="highlight-python notranslate" id="perfperbinexamplelargen"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">MiLoMerge</span>
 
@@ -355,18 +355,25 @@ they have to be 1-dimensional distributions! Since
 the curves are ordered by ratio, one can simply
 call <code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.ndarray.ravel()</span></code> to unroll the histogram
 into an equivalent 1-dimensional distribution.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The metric functions specifically take in arrays of floats.
+If the histogram being used is an array of integers,
+simply call <code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.ndarray.astype()</span></code> to convert
+it to a float.</p>
+</div>
 <div class="highlight-python notranslate" id="roc-loc-example"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">MiLoMerge</span>
 
 <span class="c1"># Imagine that h1 and h2 are n-dimensional NumPy histograms</span>
-<span class="c1"># of some arbitrary variable</span>
+<span class="c1"># of some arbitrary variable, which are currently integer arrays</span>
 
 <span class="c1">#Using the LOC curve</span>
-<span class="n">TPR</span><span class="p">,</span> <span class="n">FPR</span><span class="p">,</span> <span class="n">score</span> <span class="o">=</span> <span class="n">MiLoMerge</span><span class="o">.</span><span class="n">LOC_curve</span><span class="p">(</span><span class="n">h1</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">h2</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+<span class="n">TPR</span><span class="p">,</span> <span class="n">FPR</span><span class="p">,</span> <span class="n">score</span> <span class="o">=</span> <span class="n">MiLoMerge</span><span class="o">.</span><span class="n">LOC_curve</span><span class="p">(</span><span class="n">h1</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">),</span> <span class="n">h2</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">))</span>
 
 <span class="c1">#Using the ROC curve</span>
-<span class="n">TPR</span><span class="p">,</span> <span class="n">FPR</span><span class="p">,</span> <span class="n">score</span> <span class="o">=</span> <span class="n">MiLoMerge</span><span class="o">.</span><span class="n">ROC_curve</span><span class="p">(</span><span class="n">h1</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">h2</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+<span class="n">TPR</span><span class="p">,</span> <span class="n">FPR</span><span class="p">,</span> <span class="n">score</span> <span class="o">=</span> <span class="n">MiLoMerge</span><span class="o">.</span><span class="n">ROC_curve</span><span class="p">(</span><span class="n">h1</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">),</span> <span class="n">h2</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">))</span>
 </pre></div>
 </div>
 </section>

@@ -8,7 +8,8 @@ def test_version():
     with open("src/MiLoMerge/__init__.py") as init_file:
         version_2 = init_file.readlines()[7].split("=")[-1].strip().replace('"','')
     
-    version_3 = MiLoMerge.__version__
+    with open("pyproject.toml") as toml_file:
+        version_3 = toml_file.readlines()[6].split("=")[-1].strip().replace('"','')
     
     assert version == version_2 == version_3
 

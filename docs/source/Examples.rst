@@ -56,10 +56,10 @@ keep calling the run method.
 
 
 Generating a Toy Dataset and Plotting Separability as a Function of Bin Number (Large N)
---------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
 
 .. code-block:: python
-    :name: perfPerBinExample
+    :name: perfPerBinExamplelargeN
 
     import matplotlib.pyplot as plt
     import numpy as np
@@ -118,6 +118,13 @@ the curves are ordered by ratio, one can simply
 call :py:func:`numpy.ndarray.ravel` to unroll the histogram
 into an equivalent 1-dimensional distribution.
 
+.. warning:: 
+    The metric functions specifically take in arrays of floats.
+    If the histogram being used is an array of integers,
+    simply call :py:func:`numpy.ndarray.astype` to convert
+    it to a float.
+
+
 .. code-block:: python
     :name: ROC_LOC_example
 
@@ -126,12 +133,12 @@ into an equivalent 1-dimensional distribution.
     import MiLoMerge
 
     # Imagine that h1 and h2 are n-dimensional NumPy histograms
-    # of some arbitrary variable
+    # of some arbitrary variable, which are currently integer arrays
 
     #Using the LOC curve
-    TPR, FPR, score = MiLoMerge.LOC_curve(h1.ravel(), h2.ravel())
+    TPR, FPR, score = MiLoMerge.LOC_curve(h1.ravel().astype(float), h2.ravel().astype(float))
 
     #Using the ROC curve
-    TPR, FPR, score = MiLoMerge.ROC_curve(h1.ravel(), h2.ravel())
+    TPR, FPR, score = MiLoMerge.ROC_curve(h1.ravel().astype(float), h2.ravel().astype(float))
 
 
